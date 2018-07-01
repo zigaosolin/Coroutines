@@ -14,6 +14,7 @@ namespace Coroutines.Tests
             {
                 var waitObject = new AsyncWait<string>(file.ReadLineAsync());
                 yield return waitObject;
+                string line = waitObject.Result;
                 
             }
         }

@@ -8,6 +8,5 @@ namespace Coroutines
     public interface IWaitObject
     {
         bool IsComplete { get; }
-        void OnCompleted(Action continuation);
     }
 }

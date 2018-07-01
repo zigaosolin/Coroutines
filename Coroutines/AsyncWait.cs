@@ -5,28 +5,35 @@ using System.Threading.Tasks;
 
 namespace Coroutines
 {
-    public class AsyncWait<T> : IWaitObject
+    public class AsyncWait<T> : Coroutine<T>
     {
         Task<T> task;
 
         public AsyncWait(Task<T> task)
         {
             this.task = task;
+            this.task.GetAwaiter().OnCompleted(InternalOnCompleted);
         }
 
-        public bool IsComplete => task.IsCompleted;
-
-        public void OnCompleted(Action continuation)
+        void InternalOnCompleted()
         {
-            task.GetAwaiter().OnCompleted(continuation);
-        }
-
-        public T Result
-        {
-            get
+            if(task.Status == TaskStatus.Canceled)
             {
-                return task.Result;
+                SignalCancelled();
+            } else if(task.Status == TaskStatus.RanToCompletion)
+            {
+                SignalComplete(task.Result);
+            } else if(task.Status == TaskStatus.Faulted)
+            {
+                SignalException(task.Exception);
             }
+
+            throw new CoroutineException("Should never be reachable");
+        }
+
+        protected internal override IEnumerator<IWaitObject> Execute()
+        {
+            return null;
         }
     }
 }
