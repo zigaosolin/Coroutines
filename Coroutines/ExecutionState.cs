@@ -6,13 +6,7 @@ namespace Coroutines
 {
     public class ExecutionState
     {
-        public float DeltaTime { get; }
-        public long FrameIndex { get; }
-
-        public ExecutionState(float deltaTime, long frameIndex)
-        {
-            DeltaTime = deltaTime;
-            frameIndex = frameIndex;
-        }
+        public float DeltaTime { get; internal set; }
+        public long FrameIndex { get; internal set; }
     }
 }
