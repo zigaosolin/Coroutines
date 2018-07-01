@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Coroutines.Tests
 {
-    public class WaitThread
+    public class WaitThreadTest
     {
         IEnumerator<IWaitObject> CoroutineThread()
         {
@@ -23,7 +23,7 @@ namespace Coroutines.Tests
         [Fact]
         public void WaitForThread()
         {
-
+            Coroutines.FromEnumerator(CoroutineThread());
         }
     }
 }

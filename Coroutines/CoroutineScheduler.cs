@@ -45,7 +45,6 @@ namespace Coroutines
                 } catch(Exception ex)
                 {
                     executingCoroutine.Coroutine.SignalException(ex);
-
                 }
             }
         }

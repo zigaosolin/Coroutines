@@ -39,7 +39,6 @@ namespace Coroutines
                 result = value;
             }
         }
-        
 
         public bool IsComplete
         {

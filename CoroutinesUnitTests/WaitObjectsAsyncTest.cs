@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Coroutines.Tests
 {
-    public class WaitObjectsAsync
+    public class WaitObjectsAsyncTest
     {
         IEnumerator<IWaitObject> Coroutine1()
         {
@@ -22,7 +22,7 @@ namespace Coroutines.Tests
         [Fact]
         public void Test1()
         {
-            
+            Coroutines.FromEnumerator(Coroutine1());
         }
     }
 }
