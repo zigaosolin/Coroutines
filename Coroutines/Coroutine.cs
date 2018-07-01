@@ -23,6 +23,8 @@ namespace Coroutines
         public Coroutine Spawner { get; internal set; }
         public ICoroutineScheduler Scheduler { get; internal set; }
         public Exception Exception { get; private set; }
+        public ExecutionState ExecutionState { get; internal set; }    
+
         public object Result
         {
             get
