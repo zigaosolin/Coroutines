@@ -9,4 +9,9 @@ namespace Coroutines
     {
         bool IsComplete { get; }
     }
+
+    public interface IWaitObjectWithNotifyCompletion : IWaitObject
+    {
+        void RegisterCompleteSignal(Action onCompleted);
+    }
 }

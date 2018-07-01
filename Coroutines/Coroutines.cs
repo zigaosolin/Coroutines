@@ -20,5 +20,9 @@ namespace Coroutines
             return new WaitForSeconds(time);
         }
 
+        public static Coroutine NextFrame()
+        {
+            return null;
+        }
     }
 }

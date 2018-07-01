@@ -13,13 +13,28 @@ namespace Coroutines
         CompletedWithException
     }
 
-    public abstract class Coroutine : IWaitObject
+    public abstract class Coroutine : IWaitObject, IWaitObjectWithNotifyCompletion
     {
         object syncRoot = new object();
         List<Action> onCompletedNotifies = new List<Action>();
         object result = null;
+        volatile CoroutineStatus status = CoroutineStatus.WaitingForStart;
 
-        public CoroutineStatus Status { get; internal set; }
+        public CoroutineStatus Status
+        {
+            get
+            {
+                return status;
+            }
+            internal set
+            {
+                if (IsComplete)
+                    throw new CoroutineException("Setting status to already completed coroutine");
+
+                status = value;
+            }
+        }
+
         public Coroutine Spawner { get; internal set; }
         public ICoroutineScheduler Scheduler { get; internal set; }
         public Exception Exception { get; private set; }
@@ -34,7 +49,7 @@ namespace Coroutines
 
                 return result;
             }
-            internal set
+            set
             {
                 result = value;
             }
@@ -50,11 +65,13 @@ namespace Coroutines
             }
         }
 
+        bool IWaitObject.IsComplete => throw new NotImplementedException();
+
         // Return null if coroutine is already started/scheduled manually.
         // This is useful when scheduled as async or with any other system
         internal protected abstract IEnumerator<IWaitObject> Execute();
 
-        internal void RegisterCompleteSignal(Action onCompleted)
+        void IWaitObjectWithNotifyCompletion.RegisterCompleteSignal(Action onCompleted)
         {
             lock (syncRoot)
             {
@@ -89,11 +106,10 @@ namespace Coroutines
             }
         }
 
-        internal void SignalComplete(object result)
+        internal void SignalComplete()
         {
             lock(syncRoot)
             {
-                this.result = result;
                 Status = CoroutineStatus.CompletedNormal;
                 NotifyCompleted();
             }
@@ -106,7 +122,6 @@ namespace Coroutines
                 notify();
             }
         }
-        
     }
 
     public abstract class Coroutine<T> : Coroutine
@@ -116,6 +131,10 @@ namespace Coroutines
             get
             {
                 return (T)base.Result;
+            }
+            set
+            {
+                base.Result = value;
             }
         }
     }

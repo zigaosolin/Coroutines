@@ -22,7 +22,7 @@ namespace Coroutines
                 SignalCancelled();
             } else if(task.Status == TaskStatus.RanToCompletion)
             {
-                SignalComplete(task.Result);
+                SignalComplete();
             } else if(task.Status == TaskStatus.Faulted)
             {
                 SignalException(task.Exception);
