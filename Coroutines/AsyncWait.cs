@@ -13,6 +13,8 @@ namespace Coroutines
         {
             this.task = task;
             this.task.GetAwaiter().OnCompleted(InternalOnCompleted);
+
+            Status = CoroutineStatus.Running;
         }
 
         void InternalOnCompleted()

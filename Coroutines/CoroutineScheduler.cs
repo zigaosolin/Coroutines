@@ -23,7 +23,7 @@ namespace Coroutines
         ConcurrentQueue<CoroutineState> trigerredCoroutines = new ConcurrentQueue<CoroutineState>();
         ConcurrentQueue<CoroutineState> enqueuedCoroutines = new ConcurrentQueue<CoroutineState>();
 
-        public void Enqueue(Coroutine coroutine)
+        public void Execute(Coroutine coroutine)
         {
             enqueuedCoroutines.Enqueue(CreateCoroutineState(coroutine));
         }
