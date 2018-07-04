@@ -92,7 +92,8 @@ namespace Coroutines.Tests
         public void SubCoroutine_SpawnSequentialChildren()
         {
             var coroutine = new SubCoroutine(
-                false, false, new SubCoroutine(), new SubCoroutine(), new SubCoroutine());
+                spawnParallel: false, executeImmediatelly: false, 
+                executeChildren: new SubCoroutine[] { new SubCoroutine(), new SubCoroutine(), new SubCoroutine() });
 
             var scheduler = new CoroutineScheduler();
             scheduler.Execute(coroutine);
@@ -116,7 +117,7 @@ namespace Coroutines.Tests
             };
 
             var coroutine = new SubCoroutine(
-                true, false, subCoroutines.ToArray());
+                spawnParallel: true, executeImmediatelly: false, executeChildren: subCoroutines.ToArray());
 
             var scheduler = new CoroutineScheduler();
             scheduler.Execute(coroutine);
@@ -140,7 +141,7 @@ namespace Coroutines.Tests
             };
 
             var coroutine = new SubCoroutine(
-                true, true, subCoroutines.ToArray());
+                spawnParallel: true, executeImmediatelly: true, executeChildren: subCoroutines.ToArray());
 
             var scheduler = new CoroutineScheduler();
             scheduler.Execute(coroutine);
