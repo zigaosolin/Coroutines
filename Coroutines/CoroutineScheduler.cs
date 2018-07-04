@@ -42,6 +42,15 @@ namespace Coroutines
                 break;
             }
 
+            // Also dequeue all trigerred coroutines
+            while (true)
+            {
+                if (!trigerredCoroutines.TryDequeue(out CoroutineState result))
+                    break;
+
+                executingCoroutines.AddLast(result);
+            }
+
             for (var executingCoroutineNode = executingCoroutines.First; executingCoroutineNode != null; executingCoroutineNode = executingCoroutineNode.Next)
             {
                 CoroutineState executingCoroutine = executingCoroutineNode.Value;

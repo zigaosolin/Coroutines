@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace Coroutines.Tests
@@ -102,6 +103,139 @@ namespace Coroutines.Tests
             Assert.Equal(3, coroutine.Iteration);
             Assert.Equal(CoroutineStatus.CompletedNormal, coroutine.Status);
         }
+
+        class CustomWaitObject : IWaitObject
+        {
+            public void Complete(Exception ex = null)
+            {
+                IsComplete = true;
+                Exception = ex;
+            }
+
+            public bool IsComplete { get; private set; } = false;
+            public Exception Exception { get; private set; }
+        }
+
+        class CustomWaitObjectCoroutine : Coroutine
+        {
+            IWaitObject waitObject;
+
+            public CustomWaitObjectCoroutine(IWaitObject waitObject)
+            {
+                this.waitObject = waitObject;
+            }
+
+            protected override IEnumerator<IWaitObject> Execute()
+            {
+                yield return waitObject;
+            }
+        }
+
+        [Fact]
+        public void RunCoroutine_YieldCustomWaitObject()
+        {
+            var scheduler = new CoroutineScheduler();
+
+            var waitObject = new CustomWaitObject();
+            var coroutine = new CustomWaitObjectCoroutine(waitObject);
+
+            scheduler.Execute(coroutine);
+
+            for (int i = 0; i < 10; i++)
+                scheduler.Update(0);
+
+            Assert.Equal(CoroutineStatus.Running, coroutine.Status);
+            waitObject.Complete(null);
+            scheduler.Update(0);
+            Assert.Equal(CoroutineStatus.CompletedNormal, coroutine.Status);
+        }
+
+        [Fact]
+        public void RunCoroutine_YieldCustomWaitObject_WithException()
+        {
+            var scheduler = new CoroutineScheduler();
+
+            var waitObject = new CustomWaitObject();
+            var coroutine = new CustomWaitObjectCoroutine(waitObject);
+
+            scheduler.Execute(coroutine);
+
+            for (int i = 0; i < 10; i++)
+                scheduler.Update(0);
+
+            Assert.Equal(CoroutineStatus.Running, coroutine.Status);
+            waitObject.Complete(new Exception());
+            scheduler.Update(0);
+            Assert.Equal(CoroutineStatus.CompletedWithException, coroutine.Status);
+            Assert.IsType<AggregateException>(coroutine.Exception);
+        }
+
+        class CustomWaitObjectWithNotifyCompletion : IWaitObjectWithNotifyCompletion
+        {
+            object syncRoot = new object();
+            Action onCompleted;
+
+            public void Complete(Exception ex = null)
+            {
+                lock (syncRoot)
+                {
+                    IsComplete = true;
+                    Exception = ex;
+
+                    onCompleted?.Invoke();
+                }
+            }
+
+            public void RegisterCompleteSignal(Action onCompleted)
+            {
+                lock (syncRoot)
+                {
+                    // The custom implementation must trigger event if it is already completed
+                    if (IsComplete)
+                    {
+                        onCompleted();
+                    }
+                    else
+                    {
+                        this.onCompleted += onCompleted;
+                    }
+                }
+            }
+
+            public bool IsComplete { get; private set; } = false;
+            public Exception Exception { get; private set; }
+        }
+
+        [Fact]
+        public async Task RunCoroutine_YieldCustomWaitObjectWithNotify()
+        {
+            var scheduler = new CoroutineScheduler();
+
+            var waitObject = new CustomWaitObjectWithNotifyCompletion();
+            var coroutine = new CustomWaitObjectCoroutine(waitObject);
+
+            scheduler.Execute(coroutine);
+
+            scheduler.Update(0);
+            Assert.Equal(CoroutineStatus.Running, coroutine.Status);
+
+            Task completionTask = Task.Run(async () =>
+            {
+               await Task.Delay(500);
+               waitObject.Complete(null);
+            });
+
+            while (coroutine.Status == CoroutineStatus.Running)
+            {
+                scheduler.Update(0);
+                await Task.Delay(10);
+            }
+
+            Assert.Equal(TaskStatus.RanToCompletion, completionTask.Status);
+            Assert.Equal(CoroutineStatus.CompletedNormal, coroutine.Status);
+            
+        }
+
 
     }
 }
