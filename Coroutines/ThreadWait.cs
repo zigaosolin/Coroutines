@@ -25,6 +25,7 @@ namespace Coroutines
                 return thread.ThreadState == ThreadState.Stopped;
             }
         }
-            
+
+        public Exception Exception => null;
     }
 }

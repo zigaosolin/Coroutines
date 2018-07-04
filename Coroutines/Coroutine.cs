@@ -26,11 +26,8 @@ namespace Coroutines
             {
                 return status;
             }
-            internal set
+            private set
             {
-                if (IsComplete)
-                    throw new CoroutineException("Setting status to already completed coroutine");
-
                 status = value;
             }
         }
@@ -90,6 +87,10 @@ namespace Coroutines
         {
             lock(syncRoot)
             {
+                if(Status != CoroutineStatus.Running)
+                    throw new CoroutineException("Signalling end state to running coroutine");
+                
+
                 Exception = new OperationCanceledException();
                 Status = CoroutineStatus.Cancelled;               
                 NotifyCompleted();
@@ -100,6 +101,9 @@ namespace Coroutines
         {
             lock (syncRoot)
             {
+                if (Status != CoroutineStatus.Running)
+                    throw new CoroutineException("Signalling end state to running coroutine");
+
                 Exception = ex;
                 Status = CoroutineStatus.CompletedWithException;
                 NotifyCompleted();
@@ -110,8 +114,22 @@ namespace Coroutines
         {
             lock(syncRoot)
             {
+                if (Status != CoroutineStatus.Running)
+                    throw new CoroutineException("Signalling end state to running coroutine");
+
                 Status = CoroutineStatus.CompletedNormal;
                 NotifyCompleted();
+            }
+        }
+
+        internal void SignalStarted()
+        {
+            lock(syncRoot)
+            {
+                if (Status != CoroutineStatus.WaitingForStart)
+                    throw new CoroutineException("Signalling start to non-stated coroutine");
+
+                Status = CoroutineStatus.Running;
             }
         }
         

@@ -11,14 +11,61 @@ namespace Coroutines.Tests
         {
             protected override IEnumerator<IWaitObject> Execute()
             {
+                // This code has no yield statements and is not
+                // a enumerator (just a normal function)
                 throw new Exception();
             }
         }
 
         [Fact]
-        public void RunCoroutine_ExectureThrowsException()
+        public void RunCoroutine_ExecuteThrowsException()
         {
+            var scheduler = new CoroutineScheduler();
 
+            var coroutine = new RunCoroutineExecuteThrowsException();
+
+            Assert.Equal(CoroutineStatus.WaitingForStart, coroutine.Status);
+
+            // This throws exception on Execute as there are no yield statements
+            // and calling that method actually executes it (it does not prepare enumeration)
+            Assert.Throws<Exception>(() => scheduler.Execute(coroutine));
+        }
+
+        class RunCoroutineExecuteThrowsExceptionInCoroutine : Coroutine
+        {
+            int numberOfNullReturns = 0;
+
+            public RunCoroutineExecuteThrowsExceptionInCoroutine(int nullReturns)
+            {
+                numberOfNullReturns = nullReturns;
+            }
+
+            protected override IEnumerator<IWaitObject> Execute()
+            {
+                for (int i = 0; i < numberOfNullReturns; i++)
+                {
+                    yield return null;
+                }
+                throw new Exception();
+            }
+        }
+
+        [Fact]
+        public void RunCoroutine_ThrowsException()
+        {
+            var scheduler = new CoroutineScheduler();
+
+            var coroutine = new RunCoroutineExecuteThrowsExceptionInCoroutine(1);
+
+            Assert.Equal(CoroutineStatus.WaitingForStart, coroutine.Status);
+            scheduler.Execute(coroutine);
+            Assert.Equal(CoroutineStatus.Running, coroutine.Status);
+            scheduler.Update(0);
+            Assert.Equal(CoroutineStatus.Running, coroutine.Status);
+            scheduler.Update(0);
+
+            Assert.Equal(CoroutineStatus.CompletedWithException, coroutine.Status);
+            Assert.IsType<Exception>(coroutine.Exception);
         }
 
         class RunCoroutineWithYieldNull : Coroutine

@@ -25,7 +25,9 @@ namespace Coroutines
 
         public void Execute(Coroutine coroutine)
         {
-            enqueuedCoroutines.Enqueue(CreateCoroutineState(coroutine));
+            var state = CreateCoroutineState(coroutine);
+            state.Coroutine.SignalStarted();
+            enqueuedCoroutines.Enqueue(state);
         }
 
         public void Update(float deltaTime)
@@ -52,9 +54,11 @@ namespace Coroutines
                         continue;
 
                     // We check if wait object ended in bad state
-                    if(waitObject is Coroutine coroutineWaitObject)
+                    if(waitObject.Exception != null)
                     {
-
+                        executingCoroutine.Coroutine.SignalException(
+                            new AggregateException("Wait for object threw an exception", waitObject.Exception));
+                        continue;
                     }
 
                     executingCoroutine.WaitForObject = null;
@@ -102,7 +106,7 @@ namespace Coroutines
                 bool isCompleted;
                 try
                 {
-                    isCompleted = executingCoroutine.Enumerator.MoveNext();
+                    isCompleted = !executingCoroutine.Enumerator.MoveNext();
                 }
                 catch (Exception ex)
                 {
@@ -171,7 +175,7 @@ namespace Coroutines
                 return;
 
             var internalState = CreateCoroutineState(newWaitCoroutine);
-            newWaitCoroutine.Status = CoroutineStatus.Running;
+            newWaitCoroutine.SignalStarted();
 
             // We want to do evaluation to the first yield immediatelly
             var advanceAction = AdvanceCoroutine(internalState);

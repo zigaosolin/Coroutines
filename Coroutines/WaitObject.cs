@@ -8,6 +8,7 @@ namespace Coroutines
     public interface IWaitObject
     {
         bool IsComplete { get; }
+        Exception Exception { get; }
     }
 
     public interface IWaitObjectWithNotifyCompletion : IWaitObject
