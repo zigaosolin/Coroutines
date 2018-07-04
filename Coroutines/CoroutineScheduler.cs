@@ -2,11 +2,16 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading;
 
 namespace Coroutines
 {
     public interface ICoroutineScheduler
     {
+        void Execute(Coroutine coroutine);
+
+        // Can be only called from coroutine with the same scheduler
+        void ExecuteImmediately(Coroutine coroutine);
     }
 
     public class CoroutineScheduler : ICoroutineScheduler
@@ -22,12 +27,28 @@ namespace Coroutines
         List<CoroutineState> scheduledCoroutines = new List<CoroutineState>();
         ConcurrentQueue<CoroutineState> trigerredCoroutines = new ConcurrentQueue<CoroutineState>();
         ConcurrentQueue<CoroutineState> enqueuedCoroutines = new ConcurrentQueue<CoroutineState>();
+        volatile int updateThreadID = -1;
 
         public void Execute(Coroutine coroutine)
         {
             var state = CreateCoroutineState(coroutine);
-            state.Coroutine.SignalStarted();
+            state.Coroutine.SignalStarted(this);
             enqueuedCoroutines.Enqueue(state);
+        }
+
+        public void ExecuteImmediately(Coroutine coroutine)
+        {
+            if(updateThreadID == -1)
+            {
+                throw new CoroutineException("ExecuteImmediatelly not called from coroutine");
+            }
+
+            if(updateThreadID != Thread.CurrentThread.ManagedThreadId)
+            {
+                throw new CoroutineException("ExecuteImmediatelly called from different scheduler than current coroutine");
+            }
+
+            StartSubCoroutine(coroutine);
         }
 
         public void Update(float deltaTime)
@@ -35,12 +56,15 @@ namespace Coroutines
             // Dequeue all enqueued coroutines and schedule them after all other coroutines
             while(true)
             {
-                if(enqueuedCoroutines.TryDequeue(out CoroutineState result))
+                if(!enqueuedCoroutines.TryDequeue(out CoroutineState result))
                 {
-                    executingCoroutines.AddLast(result);
+                    break;
                 }
-                break;
+
+                executingCoroutines.AddLast(result);
             }
+
+            updateThreadID = Thread.CurrentThread.ManagedThreadId;
 
             // Also dequeue all trigerred coroutines
             while (true)
@@ -51,7 +75,7 @@ namespace Coroutines
                 executingCoroutines.AddLast(result);
             }
 
-            for (var executingCoroutineNode = executingCoroutines.First; executingCoroutineNode != null; executingCoroutineNode = executingCoroutineNode.Next)
+            for (var executingCoroutineNode = executingCoroutines.First; executingCoroutineNode != null; )
             {
                 CoroutineState executingCoroutine = executingCoroutineNode.Value;
                 var waitObject = executingCoroutine.WaitForObject;
@@ -60,13 +84,18 @@ namespace Coroutines
                 if (executingCoroutine.WaitForObject != null)
                 {
                     if (!executingCoroutine.WaitForObject.IsComplete)
+                    {
+                        executingCoroutineNode = executingCoroutineNode.Next;
                         continue;
+                    }
 
                     // We check if wait object ended in bad state
                     if(waitObject.Exception != null)
                     {
                         executingCoroutine.Coroutine.SignalException(
                             new AggregateException("Wait for object threw an exception", waitObject.Exception));
+
+                        executingCoroutineNode = executingCoroutineNode.Next;
                         continue;
                     }
 
@@ -74,6 +103,8 @@ namespace Coroutines
                 }
 
                 var advanceAction = AdvanceCoroutine(executingCoroutine);
+
+                var nextNode = executingCoroutineNode.Next;
                 switch (advanceAction)
                 {
                     case AdvanceAction.Keep:
@@ -93,8 +124,23 @@ namespace Coroutines
                         break;
 
                     executingCoroutines.AddLast(result);
+
+                    // Special case, if we are at end, we removed the node, the next node
+                    // points to null when in fact it should point to trigerred coroutine
+                    if (advanceAction == AdvanceAction.MoveToWaitForTrigger ||
+                        advanceAction == AdvanceAction.Complete)
+                    {                
+                        if (nextNode == null)
+                        {
+                            nextNode = executingCoroutines.First;
+                        }
+                    }
                 }
+
+                executingCoroutineNode = nextNode;
             }
+
+            updateThreadID = -1;
         }
 
         enum AdvanceAction
@@ -138,20 +184,24 @@ namespace Coroutines
 
                 if (newWait is Coroutine newWaitCoroutine)
                 {
-                    TryStartSubCoroutine(newWaitCoroutine);
-
-                    switch(newWaitCoroutine.Status)
+                    // If we yield an unstarted coroutine, we add it to this scheduler!
+                    if (newWaitCoroutine.Status == CoroutineStatus.WaitingForStart)
                     {
-                        case CoroutineStatus.CompletedNormal:
-                            continue;
 
-                        case CoroutineStatus.CompletedWithException:
-                            coroutine.SignalException(newWaitCoroutine.Exception);
-                            return AdvanceAction.Complete;
+                        StartSubCoroutine(newWaitCoroutine);
 
-                        case CoroutineStatus.Cancelled:
-                            coroutine.SignalException(new OperationCanceledException("Internal coroutine was cancelled"));
-                            return AdvanceAction.Complete;
+                        switch (newWaitCoroutine.Status)
+                        {
+                            case CoroutineStatus.CompletedNormal:
+                                coroutine.SignalComplete();
+                                return AdvanceAction.Complete;
+                            case CoroutineStatus.CompletedWithException:
+                                coroutine.SignalException(newWaitCoroutine.Exception);
+                                return AdvanceAction.Complete;
+                            case CoroutineStatus.Cancelled:
+                                coroutine.SignalException(new OperationCanceledException("Internal coroutine was cancelled"));
+                                return AdvanceAction.Complete;
+                        }
                     }
                 }           
                 else if (newWait.IsComplete)
@@ -172,19 +222,14 @@ namespace Coroutines
 
                 }
                 
-
                 return AdvanceAction.Keep;
             }
         }
 
-        private void TryStartSubCoroutine(Coroutine newWaitCoroutine)
+        private void StartSubCoroutine(Coroutine newWaitCoroutine)
         {
-            // If we yield an unsarted coroutine, we add it to this scheduler!
-            if (newWaitCoroutine.Status != CoroutineStatus.WaitingForStart)
-                return;
-
             var internalState = CreateCoroutineState(newWaitCoroutine);
-            newWaitCoroutine.SignalStarted();
+            newWaitCoroutine.SignalStarted(this);
 
             // We want to do evaluation to the first yield immediatelly
             var advanceAction = AdvanceCoroutine(internalState);

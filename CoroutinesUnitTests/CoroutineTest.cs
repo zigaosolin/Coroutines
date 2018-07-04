@@ -233,7 +233,6 @@ namespace Coroutines.Tests
 
             Assert.Equal(TaskStatus.RanToCompletion, completionTask.Status);
             Assert.Equal(CoroutineStatus.CompletedNormal, coroutine.Status);
-            
         }
 
 

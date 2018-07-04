@@ -14,7 +14,7 @@ namespace Coroutines
             this.task = task;
             this.task.GetAwaiter().OnCompleted(InternalOnCompleted);
 
-            SignalStarted();
+            SignalStarted(null);
         }
 
         void InternalOnCompleted()

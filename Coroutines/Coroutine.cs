@@ -33,7 +33,7 @@ namespace Coroutines
         }
 
         public Coroutine Spawner { get; internal set; }
-        public ICoroutineScheduler Scheduler { get; internal set; }
+        public ICoroutineScheduler Scheduler { get; private set; }
         public Exception Exception { get; private set; }
         public ExecutionState ExecutionState { get; internal set; }    
 
@@ -62,7 +62,7 @@ namespace Coroutines
             }
         }
 
-        bool IWaitObject.IsComplete => throw new NotImplementedException();
+        bool IWaitObject.IsComplete => IsComplete;
 
         // Return null if coroutine is already started/scheduled manually.
         // This is useful when scheduled as async or with any other system
@@ -122,13 +122,14 @@ namespace Coroutines
             }
         }
 
-        internal void SignalStarted()
+        internal void SignalStarted(ICoroutineScheduler scheduler)
         {
             lock(syncRoot)
             {
                 if (Status != CoroutineStatus.WaitingForStart)
                     throw new CoroutineException("Signalling start to non-stated coroutine");
 
+                Scheduler = scheduler;
                 Status = CoroutineStatus.Running;
             }
         }
