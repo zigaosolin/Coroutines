@@ -4,9 +4,9 @@ using System.Text;
 
 namespace Coroutines
 {
-    public class ExecutionState
+    public interface IExecutionState
     {
-        public float DeltaTime { get; internal set; }
-        public long FrameIndex { get; internal set; }
+        float DeltaTime { get; }
+        long FrameIndex { get; }
     }
 }

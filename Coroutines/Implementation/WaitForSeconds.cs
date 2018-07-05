@@ -4,11 +4,11 @@ using System.Text;
 
 namespace Coroutines.Implementation
 {
-    internal class WaitForSeconds : Coroutine
+    internal class WaitForSecondsCoroutine : Coroutine
     {
         float waitTime;
 
-        public WaitForSeconds(float seconds)
+        public WaitForSecondsCoroutine(float seconds)
         {
             waitTime = seconds;
         }

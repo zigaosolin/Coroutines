@@ -21,7 +21,7 @@ namespace Coroutines.Tests
         [Fact]
         public void RunCoroutine_ExecuteThrowsException()
         {
-            var scheduler = new CoroutineScheduler();
+            var scheduler = new InterleavedCoroutineScheduler();
 
             var coroutine = new RunCoroutineExecuteThrowsException();
 
@@ -54,7 +54,7 @@ namespace Coroutines.Tests
         [Fact]
         public void RunCoroutine_ThrowsException()
         {
-            var scheduler = new CoroutineScheduler();
+            var scheduler = new InterleavedCoroutineScheduler();
 
             var coroutine = new RunCoroutineExecuteThrowsExceptionInCoroutine(1);
 
@@ -87,7 +87,7 @@ namespace Coroutines.Tests
         [Fact]
         public void RunCoroutine_WithYieldNull()
         {
-            var scheduler = new CoroutineScheduler();
+            var scheduler = new InterleavedCoroutineScheduler();
 
             var coroutine = new RunCoroutineWithYieldNull();
             Assert.Equal(CoroutineStatus.WaitingForStart, coroutine.Status);
@@ -134,7 +134,7 @@ namespace Coroutines.Tests
         [Fact]
         public void RunCoroutine_YieldCustomWaitObject()
         {
-            var scheduler = new CoroutineScheduler();
+            var scheduler = new InterleavedCoroutineScheduler();
 
             var waitObject = new CustomWaitObject();
             var coroutine = new CustomWaitObjectCoroutine(waitObject);
@@ -153,7 +153,7 @@ namespace Coroutines.Tests
         [Fact]
         public void RunCoroutine_YieldCustomWaitObject_WithException()
         {
-            var scheduler = new CoroutineScheduler();
+            var scheduler = new InterleavedCoroutineScheduler();
 
             var waitObject = new CustomWaitObject();
             var coroutine = new CustomWaitObjectCoroutine(waitObject);
@@ -209,7 +209,7 @@ namespace Coroutines.Tests
         [Fact]
         public async Task RunCoroutine_YieldCustomWaitObjectWithNotify()
         {
-            var scheduler = new CoroutineScheduler();
+            var scheduler = new InterleavedCoroutineScheduler();
 
             var waitObject = new CustomWaitObjectWithNotifyCompletion();
             var coroutine = new CustomWaitObjectCoroutine(waitObject);
@@ -235,6 +235,82 @@ namespace Coroutines.Tests
             Assert.Equal(CoroutineStatus.CompletedNormal, coroutine.Status);
         }
 
+        class CancelCoroutine : Coroutine
+        {
+            public int Iteration { get; private set; }
+
+            protected override IEnumerator<IWaitObject> Execute()
+            {
+                while(true)
+                {
+                    Iteration++;
+                    yield return null;
+                }
+            }
+        }
+
+        [Fact]
+        public void CoroutineCancelTest()
+        {
+            var scheduler = new InterleavedCoroutineScheduler();
+            var coroutine = new CancelCoroutine();
+
+            scheduler.Execute(coroutine);
+
+            Assert.Equal(0, coroutine.Iteration);
+            scheduler.Update(0.0f);
+            Assert.Equal(1, coroutine.Iteration);
+            coroutine.Cancel();
+            scheduler.Update(0.0f);
+            Assert.Equal(1, coroutine.Iteration);
+        }
+
+        [Fact]
+        public void CoroutineCancelTest_OtherThread()
+        {
+            var scheduler = new InterleavedCoroutineScheduler();
+            var coroutine = new CancelCoroutine();
+
+            scheduler.Execute(coroutine);
+
+            Task.Run(async () =>
+            {
+                await Task.Delay(100);
+                coroutine.Cancel();
+            });
+
+            while(coroutine.Status == CoroutineStatus.Running)
+            {
+                scheduler.Update(0);
+            }
+
+            Assert.Equal(CoroutineStatus.Cancelled, coroutine.Status);
+        }
+
+        public class ExecutionStateCoroutine : Coroutine
+        {
+            protected override IEnumerator<IWaitObject> Execute()
+            {
+                Assert.Equal(0.1f, ExecutionState.DeltaTime);
+                Assert.Equal(0, ExecutionState.FrameIndex);
+                yield return null;
+                yield return null;
+                Assert.Equal(0.11f, ExecutionState.DeltaTime);
+                Assert.Equal(2, ExecutionState.FrameIndex);
+            }
+        }
+
+        [Fact]
+        public void CoroutineExecutionState()
+        {
+            var scheduler = new InterleavedCoroutineScheduler();
+            var coroutine = new ExecutionStateCoroutine();
+
+            scheduler.Execute(coroutine);
+            scheduler.Update(0.1f);
+            scheduler.Update(0);
+            scheduler.Update(0.11f);
+        }
 
     }
 }

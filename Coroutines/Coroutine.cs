@@ -15,7 +15,7 @@ namespace Coroutines
 
     public abstract class Coroutine : IWaitObject, IWaitObjectWithNotifyCompletion
     {
-        object syncRoot = new object();
+        internal object SyncRoot { get; } = new object();
         List<Action> onCompletedNotifies = new List<Action>();
         object result = null;
         volatile CoroutineStatus status = CoroutineStatus.WaitingForStart;
@@ -32,10 +32,10 @@ namespace Coroutines
             }
         }
 
-        public Coroutine Spawner { get; internal set; }
+        public Coroutine Spawner { get; private set; }
         public ICoroutineScheduler Scheduler { get; private set; }
         public Exception Exception { get; private set; }
-        public ExecutionState ExecutionState { get; internal set; }    
+        public IExecutionState ExecutionState { get; private set; }    
 
         public object Result
         {
@@ -62,6 +62,18 @@ namespace Coroutines
             }
         }
 
+        public bool Cancel()
+        {
+            lock (SyncRoot)
+            {
+                if (Status != CoroutineStatus.Running)
+                    return false;
+
+                SignalCancelled();
+                return true;
+            }         
+        }
+
         bool IWaitObject.IsComplete => IsComplete;
 
         // Return null if coroutine is already started/scheduled manually.
@@ -70,7 +82,7 @@ namespace Coroutines
 
         void IWaitObjectWithNotifyCompletion.RegisterCompleteSignal(Action onCompleted)
         {
-            lock (syncRoot)
+            lock (SyncRoot)
             {
                 if (IsComplete)
                 {
@@ -85,12 +97,11 @@ namespace Coroutines
 
         internal void SignalCancelled()
         {
-            lock(syncRoot)
+            lock(SyncRoot)
             {
                 if(Status != CoroutineStatus.Running)
-                    throw new CoroutineException("Signalling end state to running coroutine");
+                    throw new CoroutineException("Cancelling coroutine that is not running");
                 
-
                 Exception = new OperationCanceledException();
                 Status = CoroutineStatus.Cancelled;               
                 NotifyCompleted();
@@ -99,7 +110,7 @@ namespace Coroutines
 
         internal void SignalException(Exception ex)
         {
-            lock (syncRoot)
+            lock (SyncRoot)
             {
                 if (Status != CoroutineStatus.Running)
                     throw new CoroutineException("Signalling end state to running coroutine");
@@ -112,7 +123,7 @@ namespace Coroutines
 
         internal void SignalComplete()
         {
-            lock(syncRoot)
+            lock(SyncRoot)
             {
                 if (Status != CoroutineStatus.Running)
                     throw new CoroutineException("Signalling end state to running coroutine");
@@ -122,14 +133,16 @@ namespace Coroutines
             }
         }
 
-        internal void SignalStarted(ICoroutineScheduler scheduler)
+        internal void SignalStarted(ICoroutineScheduler scheduler, IExecutionState executionState, Coroutine spawner)
         {
-            lock(syncRoot)
+            lock(SyncRoot)
             {
                 if (Status != CoroutineStatus.WaitingForStart)
                     throw new CoroutineException("Signalling start to non-stated coroutine");
 
                 Scheduler = scheduler;
+                ExecutionState = executionState;
+                Spawner = spawner;
                 Status = CoroutineStatus.Running;
             }
         }

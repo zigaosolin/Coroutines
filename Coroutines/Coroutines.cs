@@ -17,7 +17,7 @@ namespace Coroutines
 
         public static Coroutine WaitForSeconds(float time)
         {
-            return new WaitForSeconds(time);
+            return new WaitForSecondsCoroutine(time);
         }
 
         public static Coroutine NextFrame()

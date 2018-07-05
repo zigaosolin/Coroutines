@@ -70,7 +70,7 @@ namespace Coroutines.Tests
             var coroutine = new SubCoroutine(
                 false, false, subCoroutine);
 
-            var scheduler = new CoroutineScheduler();
+            var scheduler = new InterleavedCoroutineScheduler();
             scheduler.Execute(coroutine);
 
             Assert.Equal(CoroutineStatus.WaitingForStart, subCoroutine.Status);
@@ -95,7 +95,7 @@ namespace Coroutines.Tests
                 spawnParallel: false, executeImmediatelly: false, 
                 executeChildren: new SubCoroutine[] { new SubCoroutine(), new SubCoroutine(), new SubCoroutine() });
 
-            var scheduler = new CoroutineScheduler();
+            var scheduler = new InterleavedCoroutineScheduler();
             scheduler.Execute(coroutine);
 
             for (int i = 0; i < 3; i++)
@@ -119,7 +119,7 @@ namespace Coroutines.Tests
             var coroutine = new SubCoroutine(
                 spawnParallel: true, executeImmediatelly: false, executeChildren: subCoroutines.ToArray());
 
-            var scheduler = new CoroutineScheduler();
+            var scheduler = new InterleavedCoroutineScheduler();
             scheduler.Execute(coroutine);
 
             scheduler.Update(0); //< Executes ALL children (not processed in this frame)
@@ -143,7 +143,7 @@ namespace Coroutines.Tests
             var coroutine = new SubCoroutine(
                 spawnParallel: true, executeImmediatelly: true, executeChildren: subCoroutines.ToArray());
 
-            var scheduler = new CoroutineScheduler();
+            var scheduler = new InterleavedCoroutineScheduler();
             scheduler.Execute(coroutine);
 
             scheduler.Update(0); //< Executes ALL children with one frame
@@ -152,5 +152,31 @@ namespace Coroutines.Tests
             scheduler.Update(0); //< All children complete
             Assert.Equal(CoroutineStatus.CompletedNormal, coroutine.Status);
         }
+
+        [Fact]
+        public void CoroutineCancelTest_WhenOnWaitObject()
+        {
+
+        }
+
+        [Fact]
+        public void CoroutineCancelTest_CancelPropagation()
+        {
+
+        }
+
+        [Fact]
+        public void CoroutineExceptionPropagation()
+        {
+
+        }
+
+
+        [Fact]
+        public void CoroutineSpawner()
+        {
+
+        }
+
     }
 }

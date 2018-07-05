@@ -14,23 +14,28 @@ namespace Coroutines
             this.task = task;
             this.task.GetAwaiter().OnCompleted(InternalOnCompleted);
 
-            SignalStarted(null);
+            SignalStarted(null, null, null);
         }
 
         void InternalOnCompleted()
         {
-            if(task.Status == TaskStatus.Canceled)
+            if (task.Status == TaskStatus.Canceled)
             {
                 SignalCancelled();
-            } else if(task.Status == TaskStatus.RanToCompletion)
+            }
+            else if (task.Status == TaskStatus.RanToCompletion)
             {
+                Result = task.Result;
                 SignalComplete();
-            } else if(task.Status == TaskStatus.Faulted)
+            }
+            else if (task.Status == TaskStatus.Faulted)
             {
                 SignalException(task.Exception);
             }
-
-            throw new CoroutineException("Should never be reachable");
+            else
+            {
+                throw new CoroutineException("Should never be reachable");
+            }
         }
 
         protected internal override IEnumerator<IWaitObject> Execute()
