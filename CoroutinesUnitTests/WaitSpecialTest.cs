@@ -13,7 +13,7 @@ namespace Coroutines.Tests
         {
             yield return null;
 
-            ThreadWait threadWait = new ThreadWait(
+            var threadWait = Coroutines.WaitForThread(
                 new Thread(
                     () => Thread.Sleep(100)
                 )
@@ -53,9 +53,9 @@ namespace Coroutines.Tests
 
             protected override IEnumerator<IWaitObject> Execute()
             {
-                var waitObject = new AsyncWait<string>(TaskAsync());
-                yield return waitObject;
-                Result = waitObject.Result;
+                var asyncWait = Coroutines.WaitForAsync(TaskAsync());
+                yield return asyncWait;
+                yield return CompleteWithResult(asyncWait.Result);
             }
 
         }
@@ -73,6 +73,128 @@ namespace Coroutines.Tests
             }
 
             Assert.Equal("TEST-DONE", coroutine.Result);
+        }
+
+        class WaitForAnyTestCoroutine : Coroutine
+        {
+            protected override IEnumerator<IWaitObject> Execute()
+            {
+                yield return Coroutines.WaitForAny(
+                    Coroutines.WaitForAsync(Task.Delay(300)),
+                    Coroutines.WaitForAsync(Task.Delay(350)),
+                    Coroutines.WaitForAsync(Task.Delay(100))
+                    );
+            }
+        }
+
+        [Fact]
+        public async Task WaitForAny()
+        {
+            var scheduler = new InterleavedCoroutineScheduler();
+
+            var coroutine = new WaitForAnyTestCoroutine();
+            scheduler.Execute(coroutine);
+
+            scheduler.Update(0);
+            await Task.Delay(50); // All async waiters still executing
+            scheduler.Update(0.05f);
+            Assert.Equal(CoroutineStatus.Running, coroutine.Status);
+            await Task.Delay(150); // One should be done here
+            scheduler.Update(0.150f);
+            Assert.Equal(CoroutineStatus.CompletedNormal, coroutine.Status);
+        }
+
+        class WaitForAllTestCoroutine : Coroutine
+        {
+            protected override IEnumerator<IWaitObject> Execute()
+            {
+                yield return Coroutines.WaitForAll(
+                    Coroutines.WaitForAsync(Task.Delay(300)),
+                    Coroutines.WaitForAsync(Task.Delay(350)),
+                    Coroutines.WaitForAsync(Task.Delay(100))
+                    );
+            }
+        }
+
+        [Fact]
+        public async Task WaitForAll()
+        {
+            var scheduler = new InterleavedCoroutineScheduler();
+
+            var coroutine = new WaitForAllTestCoroutine();
+            scheduler.Execute(coroutine);
+
+            scheduler.Update(0);
+            await Task.Delay(50); // All async waiters still executing
+            scheduler.Update(0.05f);
+            Assert.Equal(CoroutineStatus.Running, coroutine.Status);
+            await Task.Delay(150); // One should be done here
+            scheduler.Update(0.150f);
+            Assert.Equal(CoroutineStatus.Running, coroutine.Status);
+            await Task.Delay(250); // All should be done here
+            scheduler.Update(0.250f);
+            Assert.Equal(CoroutineStatus.CompletedNormal, coroutine.Status);
+        }
+
+        class WaitForAnyWithCancelTestCoroutine : Coroutine
+        {
+            int loops;
+            Coroutine[] childrenToStart;
+
+            public WaitForAnyWithCancelTestCoroutine(params Coroutine[] children)
+            {
+                childrenToStart = children;
+            }
+
+            public WaitForAnyWithCancelTestCoroutine(int loops)
+            {
+                this.loops = loops;
+            }
+
+            protected override IEnumerator<IWaitObject> Execute()
+            {
+                if (childrenToStart != null)
+                {
+                    yield return Coroutines.WaitForAnyCancelOthers(
+                        childrenToStart
+                        );
+                }
+                else
+                {
+                    for(int i = 0; i < loops; i++)
+                    {
+                        yield return null;
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public void WaitForAnyWithCancel()
+        {
+            var scheduler = new InterleavedCoroutineScheduler();
+
+            var sub1 = new WaitForAnyWithCancelTestCoroutine(1);
+            var sub2 = new WaitForAnyWithCancelTestCoroutine(2);
+            var sub3 = new WaitForAnyWithCancelTestCoroutine(3);
+
+            var coroutine = new WaitForAnyWithCancelTestCoroutine(sub1, sub2, sub3);
+            scheduler.Execute(coroutine);
+
+            Assert.Equal(CoroutineStatus.WaitingForStart, sub1.Status);
+            scheduler.Update(0);
+            Assert.Equal(CoroutineStatus.Running, sub1.Status);
+            Assert.Equal(CoroutineStatus.Running, sub2.Status);
+            Assert.Equal(CoroutineStatus.Running, sub3.Status);
+            scheduler.Update(0);
+            Assert.Equal(CoroutineStatus.CompletedNormal, sub1.Status);
+            
+            // Not immediatelly trigerred because WaitFor uses polling
+            scheduler.Update(0);
+            Assert.Equal(CoroutineStatus.Cancelled, sub2.Status);
+            Assert.Equal(CoroutineStatus.Cancelled, sub3.Status);
+            Assert.Equal(CoroutineStatus.CompletedNormal, coroutine.Status);
+
         }
     }
 }

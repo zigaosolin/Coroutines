@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 
-namespace Coroutines
+namespace Coroutines.Implementation
 {
     public class ThreadWait : IWaitObject
     {

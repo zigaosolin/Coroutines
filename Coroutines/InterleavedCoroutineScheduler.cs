@@ -174,8 +174,8 @@ namespace Coroutines
                 // We need to lock to ensure cancellation from source does not interfere with frame
                 lock (coroutine.SyncRoot)
                 {
-                    // Cancellation can come from outside
-                    if(coroutine.Status == CoroutineStatus.Cancelled)
+                    // Cancellation can come from outside, as well as completion
+                    if(coroutine.IsComplete)
                     {
                         return AdvanceAction.Complete;
                     }
@@ -192,7 +192,7 @@ namespace Coroutines
 
                     if (isCompleted)
                     {
-                        coroutine.SignalComplete();
+                        coroutine.SignalComplete(false, null);
                         return AdvanceAction.Complete;
                     }
                 }
@@ -202,7 +202,14 @@ namespace Coroutines
 
                 // Special case null means wait to next frame
                 if (newWait == null)
+                {
                     return AdvanceAction.Keep;
+                }
+                else if (newWait is ReturnValue retVal)
+                {
+                    coroutine.SignalComplete(true, retVal.Result);
+                    return AdvanceAction.Complete;
+                }
 
                 if (newWait is Coroutine newWaitCoroutine)
                 {
@@ -214,7 +221,7 @@ namespace Coroutines
                         switch (newWaitCoroutine.Status)
                         {
                             case CoroutineStatus.CompletedNormal:
-                                coroutine.SignalComplete();
+                                coroutine.SignalComplete(false, null);
                                 return AdvanceAction.Complete;
                             case CoroutineStatus.CompletedWithException:
                                 coroutine.SignalException(newWaitCoroutine.Exception);
