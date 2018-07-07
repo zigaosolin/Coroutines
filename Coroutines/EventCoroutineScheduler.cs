@@ -17,6 +17,10 @@ namespace Coroutines
         }
     }
 
+    public interface ICoroutineEvent : IEvent
+    {
+    }
+
     internal class ContinueCoroutineEvent : ICoroutineEvent
     {
         public Coroutine Coroutine { get; }
@@ -48,11 +52,11 @@ namespace Coroutines
     // this scheduler
     public class EventCoroutineScheduler : ICoroutineScheduler
     {
-        IEventQueue eventQueue;
+        IEventPusher eventQueue;
         EventExecutionState executionState = new EventExecutionState();
         int updateThreadID = -1;
 
-        public EventCoroutineScheduler(IEventQueue eventQueue)
+        public EventCoroutineScheduler(IEventPusher eventQueue)
         {
             this.eventQueue = eventQueue;
         }
@@ -66,6 +70,7 @@ namespace Coroutines
         {
             coroutine.SignalStarted(this, executionState, null);
             var ev = new StartCoroutineEvent(coroutine);
+            eventQueue.Enqueue(ev);
         }
 
         public void ExecuteImmediately(Coroutine coroutine)
@@ -80,11 +85,18 @@ namespace Coroutines
                 throw new CoroutineException("ExecuteImmediatelly called from different scheduler than current coroutine");
             }
 
-            StartSubCoroutine(coroutine, null);
+            coroutine.SignalStarted(this, executionState, null);
+            StartAndMakeFirstIteration(coroutine);
         }
 
         public void Update(ICoroutineEvent nextEvent)
         {
+            if(updateThreadID != -1)
+            {
+                throw new CoroutineException("Update called from more than one thread");
+            }
+            updateThreadID = Thread.CurrentThread.ManagedThreadId;
+
             switch (nextEvent)
             {
                 case StartCoroutineEvent sce:
@@ -94,11 +106,13 @@ namespace Coroutines
                     ContinueCoroutine(cce);
                     break;
             }
+
+            updateThreadID = -1;
         }
 
         private void StartCoroutine(StartCoroutineEvent sce)
         {
-            StartSubCoroutine(sce.Coroutine, null);
+            StartAndMakeFirstIteration(sce.Coroutine);
         }
 
         private void ContinueCoroutine(ContinueCoroutineEvent cce)
@@ -113,7 +127,7 @@ namespace Coroutines
                 if (!waitForObject.IsComplete)
                 {
                     // We are not finished, poll next frame
-                    eventQueue.Enqueue(cce, nextFrame: true);
+                    eventQueue.EnqueueNextFrame(cce);
                     return;
                 }
 
@@ -171,7 +185,7 @@ namespace Coroutines
                 // Special case null means wait to next frame
                 if (newWait == null)
                 {
-                    eventQueue.Enqueue(new ContinueCoroutineEvent(coroutine, null, iterator), nextFrame: true);
+                    eventQueue.EnqueueNextFrame(new ContinueCoroutineEvent(coroutine, null, iterator));
                     return false;
                 }
                 else if (newWait is ReturnValue retVal)
@@ -185,7 +199,8 @@ namespace Coroutines
                     // If we yield an unstarted coroutine, we add it to this scheduler!
                     if (newWaitCoroutine.Status == CoroutineStatus.WaitingForStart)
                     {
-                        StartSubCoroutine(newWaitCoroutine, coroutine);
+                        coroutine.SignalStarted(this, executionState, coroutine);
+                        StartAndMakeFirstIteration(newWaitCoroutine);
 
                         switch (newWaitCoroutine.Status)
                         {
@@ -211,7 +226,7 @@ namespace Coroutines
                     withCompletion.RegisterCompleteSignal(
                         () =>
                         {
-                            eventQueue.Enqueue(new ContinueCoroutineEvent(coroutine, null, iterator), nextFrame: false);
+                            eventQueue.Enqueue(new ContinueCoroutineEvent(coroutine, null, iterator));
                         });
                 }
 
@@ -219,13 +234,9 @@ namespace Coroutines
             }
         }
 
-        private void StartSubCoroutine(Coroutine coroutine, Coroutine spawner)
+        private void StartAndMakeFirstIteration(Coroutine coroutine)
         {           
-            coroutine.SignalStarted(this, executionState, spawner);
-
             var iterator = coroutine.Execute();
-
-            // We want to do evaluation to the first yield immediatelly
             AdvanceCoroutine(coroutine, iterator);        
         }
     }
