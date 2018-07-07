@@ -28,7 +28,6 @@ namespace Coroutines
         }
 
         LinkedList<CoroutineState> executingCoroutines = new LinkedList<CoroutineState>();
-        List<CoroutineState> scheduledCoroutines = new List<CoroutineState>();
         ConcurrentQueue<CoroutineState> trigerredCoroutines = new ConcurrentQueue<CoroutineState>();
         ConcurrentQueue<CoroutineState> enqueuedCoroutines = new ConcurrentQueue<CoroutineState>();
         InterleavedExecutionState executionState = new InterleavedExecutionState();
@@ -92,9 +91,9 @@ namespace Coroutines
                 var waitObject = executingCoroutine.WaitForObject;
 
                 // If we need to poll wait object, this is done here (no notifies)
-                if (executingCoroutine.WaitForObject != null)
+                if (waitObject != null)
                 {
-                    if (!executingCoroutine.WaitForObject.IsComplete)
+                    if (!waitObject.IsComplete)
                     {
                         executingCoroutineNode = executingCoroutineNode.Next;
                         continue;
@@ -106,7 +105,9 @@ namespace Coroutines
                         executingCoroutine.Coroutine.SignalException(
                             new AggregateException("Wait for object threw an exception", waitObject.Exception));
 
+                        var tempNode = executingCoroutineNode;
                         executingCoroutineNode = executingCoroutineNode.Next;
+                        tempNode.List.Remove(tempNode);
                         continue;
                     }
 
@@ -125,7 +126,6 @@ namespace Coroutines
                         break;
                     case AdvanceAction.Complete:
                         executingCoroutineNode.List.Remove(executingCoroutineNode);
-                        scheduledCoroutines.Remove(executingCoroutineNode.Value);
                         break;
                 }
 
@@ -220,9 +220,6 @@ namespace Coroutines
 
                         switch (newWaitCoroutine.Status)
                         {
-                            case CoroutineStatus.CompletedNormal:
-                                coroutine.SignalComplete(false, null);
-                                return AdvanceAction.Complete;
                             case CoroutineStatus.CompletedWithException:
                                 coroutine.SignalException(newWaitCoroutine.Exception);
                                 return AdvanceAction.Complete;
@@ -231,8 +228,9 @@ namespace Coroutines
                                 return AdvanceAction.Complete;
                         }
                     }
-                }           
-                else if (newWait.IsComplete)
+                }
+
+                if (newWait.IsComplete)
                 {
                     // If the wait object is complete, we continue immediatelly (yield does not split frames)
                     continue;
@@ -266,10 +264,8 @@ namespace Coroutines
             {
                 case AdvanceAction.Keep:
                     executingCoroutines.AddFirst(internalState);
-                    scheduledCoroutines.Add(internalState);
                     break;
                 case AdvanceAction.MoveToWaitForTrigger:
-                    scheduledCoroutines.Add(internalState);
                     break;
                 case AdvanceAction.Complete:
                     break;
