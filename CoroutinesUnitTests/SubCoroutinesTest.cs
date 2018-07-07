@@ -153,29 +153,94 @@ namespace Coroutines.Tests
             Assert.Equal(CoroutineStatus.CompletedNormal, coroutine.Status);
         }
 
-        [Fact]
-        public void CoroutineCancelTest_WhenOnWaitObject()
+
+        public class BaseCancelCoroutine : Coroutine
         {
+            public Coroutine Internal { get; private set; }
 
-        }
+            IEnumerator<IWaitObject> ToCancelCoroutine()
+            {
+                yield return null;
+            }
 
-        [Fact]
-        public void CoroutineCancelTest_CancelPropagation()
-        {
-
+            protected override IEnumerator<IWaitObject> Execute()
+            {
+                Internal = Coroutines.FromEnumerator(ToCancelCoroutine());
+                yield return Internal;
+            }
         }
 
         [Fact]
         public void CoroutineExceptionPropagation()
         {
+            var coroutine = new BaseCancelCoroutine();
 
+            var scheduler = new InterleavedCoroutineScheduler();
+            scheduler.Execute(coroutine);
+            scheduler.Update(0);
+            coroutine.Internal.Cancel();
+            scheduler.Update(0);
+            Assert.Equal(CoroutineStatus.Cancelled, coroutine.Internal.Status);
+            Assert.Equal(CoroutineStatus.CompletedWithException, coroutine.Status);
+            Assert.IsType<AggregateException>(coroutine.Exception);
         }
 
+        class CustomWaitObject : IWaitObject
+        {
+            public bool IsComplete { get; set; }
+            public Exception Exception { get; set; }
+        }
+
+        IEnumerator<IWaitObject> WaitForWaitObject(CustomWaitObject which)
+        {
+            yield return which;
+        }
+
+        [Fact]
+        public void Coroutine_WhenOnWaitObject()
+        {
+            var waitObject = new CustomWaitObject();
+            var coroutine = Coroutines.FromEnumerator(WaitForWaitObject(waitObject));
+
+            var scheduler = new InterleavedCoroutineScheduler();
+            scheduler.Execute(coroutine);
+            scheduler.Update(0);
+            waitObject.Exception = new Exception();
+            waitObject.IsComplete = true;
+            scheduler.Update(0);
+            Assert.Equal(CoroutineStatus.CompletedWithException, coroutine.Status);
+            Assert.IsType<AggregateException>(coroutine.Exception);
+        }
+
+        class SpawnedCoroutine : Coroutine
+        {
+            protected override IEnumerator<IWaitObject> Execute()
+            {
+                yield return null;
+            }
+        }
+
+        class SpawnerCoroutine : Coroutine
+        {
+            protected override IEnumerator<IWaitObject> Execute()
+            {
+                Spawned = new SpawnedCoroutine();
+                yield return Spawned;
+            }
+
+            public SpawnedCoroutine Spawned{ get; set; }
+        }
 
         [Fact]
         public void CoroutineSpawner()
         {
+            var waitObject = new CustomWaitObject();
+            var coroutine = new SpawnerCoroutine();
 
+            var scheduler = new InterleavedCoroutineScheduler();
+            scheduler.Execute(coroutine);
+            scheduler.Update(0);
+            Assert.Equal(coroutine, coroutine.Spawned.Spawner);
         }
 
     }
