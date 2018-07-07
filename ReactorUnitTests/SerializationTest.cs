@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Reactor.Tests
+namespace Reactors.Tests
 {
     class SerializationTest
     {

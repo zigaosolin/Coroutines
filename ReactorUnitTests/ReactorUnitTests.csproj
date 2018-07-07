@@ -5,7 +5,7 @@
 
     <IsPackable>false</IsPackable>
 
-    <RootNamespace>Reactor.Tests</RootNamespace>
+    <RootNamespace>Reactors.Tests</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

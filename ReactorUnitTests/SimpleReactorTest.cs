@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace ReactorUnitTests
+namespace Reactors.Tests
 {
     public class SimpleReactorTest
     {
