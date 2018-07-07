@@ -1,14 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Reactors
 {
     public class ReactorIsland
     {
+        volatile bool isRunning = false;
         object syncRoot = new object();
         List<Reactor> reactors = new List<Reactor>();
+
+        TimeSpan desiredDeltaTime = new TimeSpan(0);
+        bool stopRequested = false;
 
         public ReactorIsland(params Reactor[] reactors)
         {
@@ -35,42 +40,118 @@ namespace Reactors
             }
         }
 
-        public void RemoveReactor(Reactor reactor)
+        public bool RemoveReactor(Reactor reactor)
         {
             lock(syncRoot)
             {
-                reactors.Remove(reactor);
+                return reactors.Remove(reactor);
             }
         }
 
-        public async Task RunWithDelays(float desiredDeltaTime)
+        public async Task RunAsTaskWithDelays(float desiredDeltaTime)
         {
-            float deltaTime = 0;
+            AssertNotRunning();
+            isRunning = true;
+            this.desiredDeltaTime = TimeSpan.FromSeconds(desiredDeltaTime);
+
+            TimeSpan deltaTime = new TimeSpan(0);
             DateTime start = DateTime.UtcNow;
             DateTime end;
 
-            while(true)
+            while(!stopRequested)
             {
                 start = DateTime.UtcNow;
 
                 lock(syncRoot)
                 {
-                    foreach(var reactor in reactors)
+                    float deltaTimeFloat = (float)deltaTime.TotalSeconds;
+                    foreach (var reactor in reactors)
                     {
-                        reactor.Update(deltaTime);
+                        reactor.Update(deltaTimeFloat);
                     }
                 }
 
                 end = DateTime.UtcNow;
-                deltaTime = (float)(end - start).TotalSeconds;
+                deltaTime = end - start;
 
                 // We delay and recalculate delta time
-                if(desiredDeltaTime > deltaTime)
+                if(this.desiredDeltaTime > deltaTime)
                 {
-                    await Task.Delay((int)((desiredDeltaTime - deltaTime) * 1000));
+                    await Task.Delay(this.desiredDeltaTime - deltaTime);
                     end = DateTime.UtcNow;
-                    deltaTime = (float)(end - start).TotalSeconds;
+                    deltaTime = end - start;
                 }
+            }
+
+            isRunning = false;
+        }
+
+        public Thread RunAsThread(float desiredDeltaTime)
+        {
+            AssertNotRunning();
+            isRunning = true;
+            this.desiredDeltaTime = TimeSpan.FromSeconds(desiredDeltaTime);
+
+            return new Thread(ThreadStart);
+        }
+
+        public void RequestStop()
+        {
+            if(!isRunning)
+            {
+                throw new ReactorException("Cannot stop reactor island, it is not running");
+            }
+
+            stopRequested = true;
+        }
+
+        public bool IsRunning
+        {
+            get
+            {
+                return isRunning;
+            }
+        }
+
+        void ThreadStart()
+        { 
+            TimeSpan deltaTime = TimeSpan.FromSeconds(0);
+            DateTime start = DateTime.UtcNow;
+            DateTime end;
+
+            while (!stopRequested)
+            {
+                start = DateTime.UtcNow;
+
+                lock (syncRoot)
+                {
+                    float deltaTimeFloat = (float)deltaTime.TotalSeconds;
+                    foreach (var reactor in reactors)
+                    {
+                        reactor.Update(deltaTimeFloat);
+                    }
+                }
+
+                end = DateTime.UtcNow;
+                deltaTime = (end - start);
+
+                // We delay and recalculate delta time
+                if (desiredDeltaTime > deltaTime)
+                {
+                    Thread.Sleep(desiredDeltaTime - deltaTime);
+                    end = DateTime.UtcNow;
+                    deltaTime = end - start;
+                }
+            }
+
+            isRunning = false;
+        }
+
+        void AssertNotRunning()
+        {
+            if(isRunning)
+            {
+                throw new ReactorException("Multiple Run* commands were issued on reactor island");
             }
         }
     }
