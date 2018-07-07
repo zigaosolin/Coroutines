@@ -25,37 +25,33 @@ namespace Coroutines.Implementation
             // even make execute return null if all waits have notifies
             // and avoid polling all together
 
-            while(true)
-            {
-                // We have a lock from scheduler here
-                if (AreCriteriaMet())
+            while (true)
+            {            
+                int completed = 0;
+                for (int i = 0; i < waitObjects.Length; i++)
                 {
-                    if (cancelUncompleted)
+                    if (waitObjects[i].IsComplete)
                     {
-                        cancelUncompleted = false;
-                        CancelUncompleted();
-
-                    }
-                    yield break;
+                        completed += 1;
+                        if (waitObjects[i].Exception != null)
+                        {
+                            throw new AggregateException("WaitFor* internal coroutine threw and exception", waitObjects[i].Exception);
+                        }
+                    }         
                 }
+
+                if (completed >= mustCompleteCount)
+                    break;
 
                 yield return null;
             }
+
+            if(cancelUncompleted)
+            {
+                CancelUncompleted();
+            }
         }
         
-        private bool AreCriteriaMet()
-        {
-            int completed = 0;
-            for (int i = 0; i < waitObjects.Length; i++)
-            {
-                completed += waitObjects[i].IsComplete ? 1 : 0;
-            }
-
-            if (completed >= mustCompleteCount)
-                return true;
-
-            return false;
-        }
 
         private void StartWaitCoroutines()
         {

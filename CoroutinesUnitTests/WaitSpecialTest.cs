@@ -194,7 +194,33 @@ namespace Coroutines.Tests
             Assert.Equal(CoroutineStatus.Cancelled, sub2.Status);
             Assert.Equal(CoroutineStatus.Cancelled, sub3.Status);
             Assert.Equal(CoroutineStatus.CompletedNormal, coroutine.Status);
+        }
 
+        class WaitForExceptionPropagationCoroutine : Coroutine
+        {
+            protected override IEnumerator<IWaitObject> Execute()
+            {
+                yield return Coroutines.WaitForAll(
+                    Coroutines.WaitForAsync(Task.Run(() => throw new Exception("Internal exception"))),
+                    Coroutines.WaitForAsync(Task.Delay(350))
+                    );
+            }
+        }
+
+        [Fact]
+        public async Task WaitForExceptionPropagation()
+        {
+            var scheduler = new InterleavedCoroutineScheduler();
+
+            var coroutine = new WaitForExceptionPropagationCoroutine();
+            scheduler.Execute(coroutine);
+
+            scheduler.Update(0);
+            Assert.Equal(CoroutineStatus.Running, coroutine.Status);
+            await Task.Delay(50);
+            scheduler.Update(0);
+            Assert.Equal(CoroutineStatus.CompletedWithException, coroutine.Status);
+            Assert.IsType<AggregateException>(coroutine.Exception);
         }
     }
 }
