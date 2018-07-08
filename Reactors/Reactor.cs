@@ -1,12 +1,18 @@
 ﻿using Coroutines;
+using Reactors.Implementation;
 using System;
+using System.Collections.Generic;
 
 namespace Reactors
 {
-    public abstract class Reactor
+    public abstract class Reactor : IReactorReference
     {
         EventQueue eventQueue;
         EventCoroutineScheduler scheduler;
+        FullReactorEvent currentEvent;
+        IReactorListener listener;
+        long sendEventID = 1;
+        SortedDictionary<long, RPCWait> pendingRPCWaits = new SortedDictionary<long, RPCWait>();
 
         public Reactor()
         {
@@ -14,9 +20,17 @@ namespace Reactors
             scheduler = new EventCoroutineScheduler(eventQueue);
         }
 
-        public void Enqueue(IReactorEvent ev)
+        public void Enqueue(IReactorReference source, IReactorEvent ev, long eventID = 0 , long replyID = 0)
         {
-            eventQueue.Enqueue(ev);
+            eventQueue.Enqueue(new FullReactorEvent(ev, source, eventID, replyID));
+        }
+
+        public IReactorReference Reference
+        {
+            get
+            {
+                return this;
+            }
         }
 
         public void Update(float deltaTime)
@@ -33,9 +47,24 @@ namespace Reactors
                 {
                     scheduler.Update(cev);
                 }
-                else if(ev is IReactorEvent rev)
+                else if(ev is FullReactorEvent rev)
                 {
-                    OnEvent(rev);
+                    if(rev.ReplyID != 0)
+                    {
+                        if(pendingRPCWaits.TryGetValue(rev.ReplyID, out RPCWait value))
+                        {
+                            pendingRPCWaits.Remove(rev.ReplyID);
+                            value.Trigger(rev);
+                            continue;
+                        }
+
+                        listener?.OnMissedReplyEvent(rev.Source, rev.Event, rev.ReplyID);
+                        continue;
+                    }
+
+                    currentEvent = rev;
+                    OnEvent(rev.Event);
+                    currentEvent = null;
                 }
                 else
                 {
@@ -50,5 +79,85 @@ namespace Reactors
         {
             scheduler.Execute(coroutine);
         }
+
+        protected void Execute(ReactorCoroutine coroutine)
+        {
+            coroutine.Reactor = this;
+            coroutine.ReplyID = ReplyID;
+            coroutine.Event = currentEvent.Event;
+            coroutine.Source = EventSource;
+
+            scheduler.Execute(coroutine);
+        }
+
+        protected IReactorReference EventSource
+        {
+            get
+            {
+                return currentEvent.Source;
+            }
+        }
+
+        protected long ReplyID
+        {
+            get
+            {
+                return currentEvent.EventID;
+            }
+        }
+
+        protected void Reply(IReactorEvent ev)
+        {
+            EventSource.Send(this, ev, GetNextEventID(), ReplyID);
+        }
+
+        protected void Reply(IReactorEvent ev, long replyID)
+        {
+            EventSource.Send(this, ev, GetNextEventID(), replyID);
+        }
+
+        internal long GetNextEventID()
+        {
+            return sendEventID++;
+        }
+
+        protected internal RPCWait ReplyRPC(IReactorEvent ev)
+        {
+            var data = new FullReactorEvent(ev, this, GetNextEventID(), ReplyID);
+            var wait = new RPCWait(data, EventSource);
+            pendingRPCWaits.Add(data.EventID, wait);
+
+            EventSource.Send(data.Source, data.Event, data.EventID, ReplyID);
+
+            return wait;
+        }
+
+        protected internal RPCWait ReplyRPC(IReactorEvent ev, long replyID)
+        {
+            var data = new FullReactorEvent(ev, this, GetNextEventID(), replyID);
+            var wait = new RPCWait(data, EventSource);
+            pendingRPCWaits.Add(data.EventID, wait);
+
+            EventSource.Send(data.Source, data.Event, data.EventID, replyID);
+            return wait;
+        }
+
+        protected internal RPCWait RPC(IReactorReference dest, IReactorEvent ev)
+        {
+            var data = new FullReactorEvent(ev, this, GetNextEventID(), 0);
+            var wait = new RPCWait(data, dest);
+            pendingRPCWaits.Add(data.EventID, wait);
+
+            dest.Send(data.Source, data.Event, data.EventID, data.ReplyID);
+
+            return wait;
+        }
+
+        void IReactorReference.Send(IReactorReference source, IReactorEvent ev, long eventID, long replyID)
+        {
+            Enqueue(source, ev, eventID, replyID);
+        }
+
+        string IReactorReference.UniqueName => "";
     }
 }

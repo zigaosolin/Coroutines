@@ -44,7 +44,7 @@ namespace Reactors.Tests
 
             reactor.Update(0.1f);
             Assert.Null(reactor.Data);
-            reactor.Enqueue(new Event1("abc"));
+            reactor.Enqueue(null, new Event1("abc"));
             reactor.Update(0.1f);
             Assert.Equal("abc", reactor.Data);
         }
@@ -69,7 +69,7 @@ namespace Reactors.Tests
                 protected override IEnumerator<IWaitObject> Execute()
                 {
                     yield return null;
-                    reactor.Enqueue(new Event2());
+                    reactor.Enqueue(null, new Event2());
                 }
             }
 
@@ -95,7 +95,7 @@ namespace Reactors.Tests
             var reactor = new Reactor2();
 
             reactor.Update(0.1f);
-            reactor.Enqueue(new Event1("abc"));
+            reactor.Enqueue(null, new Event1("abc"));
             Assert.False(reactor.ReceivedEvent2);
             reactor.Update(0.1f);
             Assert.False(reactor.ReceivedEvent2);

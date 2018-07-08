@@ -7,6 +7,5 @@ namespace Chat
 {
     class PlayerLoginEvent : IReactorEvent
     {
-        public IReactorReference Source => throw new NotImplementedException();
     }
 }

@@ -6,8 +6,8 @@ namespace Reactors
 {
     public interface IReactorReference
     {
-        string GUID { get; }
-        void Send(IReactorEvent ev);
+        string UniqueName { get; }
+        void Send(IReactorReference source, IReactorEvent ev, long eventID, long replyID);
     }
 
     public interface IReplicatedStateConnector<TReplicatedState>
