@@ -9,4 +9,10 @@ namespace Reactors
     {
         IReactorReference Source { get; }
     }
+
+    public interface IReactorEventWithReply<TReply> : IReactorEvent 
+        where TReply : IReactorEvent
+    {
+
+    }
 }
