@@ -74,5 +74,10 @@ namespace Reactors.Tests
 
         }
 
+        [Fact]
+        public void TimeoutTriggerRPC()
+        {
+
+        }
     }
 }
