@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Coroutines.Implementation;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text;
@@ -18,19 +19,20 @@ namespace Coroutines
         }
     }
 
+    internal class CoroutineState
+    {
+        public Coroutine Coroutine;
+        public IEnumerator<IWaitObject> Enumerator;
+        public IWaitObject WaitForObject;
+    }
+
     public class InterleavedCoroutineScheduler : ICoroutineScheduler
     {
-        class CoroutineState
-        {
-            public Coroutine Coroutine;
-            public IEnumerator<IWaitObject> Enumerator;
-            public IWaitObject WaitForObject;
-        }
-
         LinkedList<CoroutineState> executingCoroutines = new LinkedList<CoroutineState>();
         ConcurrentQueue<CoroutineState> trigerredCoroutines = new ConcurrentQueue<CoroutineState>();
         ConcurrentQueue<CoroutineState> enqueuedCoroutines = new ConcurrentQueue<CoroutineState>();
         InterleavedExecutionState executionState = new InterleavedExecutionState();
+        SmartTimerTrigger timerTrigger = new SmartTimerTrigger();
         volatile int updateThreadID = -1;
 
         public void Execute(Coroutine coroutine)
@@ -75,6 +77,7 @@ namespace Coroutines
             updateThreadID = Thread.CurrentThread.ManagedThreadId;
 
             executionState.Update(deltaTime, executionState.FrameIndex + 1);
+            timerTrigger.Update(deltaTime, trigerredCoroutines);
 
             // Also dequeue all trigerred coroutines
             while (true)
@@ -201,6 +204,14 @@ namespace Coroutines
                 executingCoroutine.WaitForObject = newWait;
 
                 // Special case null means wait to next frame
+                if(newWait is WaitForSecondsCoroutine waitForSeconds)
+                {
+                    // The wait object is set to null, we bypass it and use trigger instead
+                    executingCoroutine.WaitForObject = null;
+                    timerTrigger.AddTrigger(waitForSeconds.WaitTime, executingCoroutine);
+                    return AdvanceAction.MoveToWaitForTrigger;
+                }
+
                 if (newWait == null)
                 {
                     return AdvanceAction.Keep;

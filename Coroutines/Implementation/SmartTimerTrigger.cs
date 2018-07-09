@@ -1,18 +1,63 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text;
 
 namespace Coroutines.Implementation
 {
+    struct SmartTimerKey : IComparable<SmartTimerKey>
+    {
+        public long TimeInTicks;
+        public int SecondarySort;
+
+        public SmartTimerKey(long timeInTicks, int secondaryID)
+        {
+            this.TimeInTicks = timeInTicks;
+            this.SecondarySort = secondaryID;
+        }
+
+        public int CompareTo(SmartTimerKey other)
+        {
+            int result = TimeInTicks.CompareTo(other.TimeInTicks);
+            if (result != 0)
+                return result;
+
+            return SecondarySort.CompareTo(other.SecondarySort);
+        }
+    }
+
     internal class SmartTimerTrigger
     {
-        // The idea is that the timer has a queue of all timeouts. When delta time
-        // update is called, the operation should be O(1), so we don't update all
-        // states waiting to be trigerred. Enqueuing is O(log n)
+        long currentTime = 0;
+        int currentSecondaryID;
+        SortedDictionary<SmartTimerKey, CoroutineState> triggers = new SortedDictionary<SmartTimerKey, CoroutineState>();
 
-        // This class will allow WaitForSeconds to be replaced with trigerred wait
-        // for seconds. This would make timeout coroutines almost free in this
-        // system
+        public void Update(float deltaTime, ConcurrentQueue<CoroutineState> trigerredCoroutines)
+        {
+            currentTime += (long)(deltaTime * 1000);
 
+            List<SmartTimerKey> toRemoveList = new List<SmartTimerKey>();
+            foreach(var trigger in triggers)
+            {
+                if(trigger.Key.TimeInTicks <= currentTime)
+                {
+                    trigerredCoroutines.Enqueue(trigger.Value);
+                    toRemoveList.Add(trigger.Key);
+                    continue;
+                }
+                break;
+            }
+
+            foreach(var toRemove in toRemoveList)
+            {
+                triggers.Remove(toRemove);
+            }
+        }
+
+        public void AddTrigger(float waitForSeconds, CoroutineState coroutine)
+        {
+            long timeStamp = currentTime + (long)(waitForSeconds * 1000);
+            triggers.Add(new SmartTimerKey(timeStamp, currentSecondaryID++), coroutine);
+        }
     }
 }
