@@ -23,25 +23,64 @@ namespace Coroutines.Tests
         [Fact]
         public void SerializeSchedulerWithCoroutine_StartingExecution()
         {
-            var eventQueue = new EventQueue();
-            var scheduler = new EventCoroutineScheduler(eventQueue);
-            var coroutine = new SerializedCoroutine();
-
-            scheduler.Execute(coroutine);
-
             JsonSerializerSettings jsonSerializerSettings = new JsonSerializerSettings()
             {
                 ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
                 TypeNameHandling = TypeNameHandling.Auto
             };
-            string data = JsonConvert.SerializeObject(scheduler, jsonSerializerSettings);
-            var newScheduler = JsonConvert.DeserializeObject<EventCoroutineScheduler>(data, jsonSerializerSettings);
 
-            var newEventQueue = (EventQueue)newScheduler.EventQueue;
-            newScheduler.Update(newEventQueue.DequeueEvent());
-            newScheduler.NewFrame(0);
-            newEventQueue.NewFrame();
-            newScheduler.Update(newEventQueue.DequeueEvent());
+            string data;
+            {
+                var eventQueue = new EventQueue();
+                var scheduler = new EventCoroutineScheduler(eventQueue);
+                var coroutine = new SerializedCoroutine();
+
+                scheduler.Execute(coroutine);
+
+
+                data = JsonConvert.SerializeObject(scheduler, jsonSerializerSettings);
+            }
+
+            {
+                var newScheduler = JsonConvert.DeserializeObject<EventCoroutineScheduler>(data, jsonSerializerSettings);
+
+                var newEventQueue = (EventQueue)newScheduler.EventQueue;
+                newScheduler.Update(newEventQueue.DequeueEvent());
+                newScheduler.NewFrame(0);
+                newEventQueue.NewFrame();
+                newScheduler.Update(newEventQueue.DequeueEvent());
+            }
+        }
+
+        [Fact]
+        public void SerializeSchedulerWithCoroutine_InExecution()
+        {
+            JsonSerializerSettings jsonSerializerSettings = new JsonSerializerSettings()
+            {
+                ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+                TypeNameHandling = TypeNameHandling.Auto
+            };
+
+            string data;
+            {
+                var eventQueue = new EventQueue();
+                var scheduler = new EventCoroutineScheduler(eventQueue);
+                var coroutine = new SerializedCoroutine();
+
+                scheduler.Execute(coroutine);
+                scheduler.Update(eventQueue.DequeueEvent());
+
+                data = JsonConvert.SerializeObject(scheduler, jsonSerializerSettings);
+            }
+
+            {
+                var newScheduler = JsonConvert.DeserializeObject<EventCoroutineScheduler>(data, jsonSerializerSettings);
+
+                var newEventQueue = (EventQueue)newScheduler.EventQueue;
+                newScheduler.NewFrame(0);
+                newEventQueue.NewFrame();
+                newScheduler.Update(newEventQueue.DequeueEvent());
+            }
         }
 
     }
