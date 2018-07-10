@@ -139,7 +139,7 @@ namespace Reactors.Performance
             }
             DateTime end = DateTime.UtcNow;
 
-            Console.WriteLine($"Time to process {WaitNum:n0} coroutine with average wait time {AverageWaitTime:n} by event scheduler: {(end - start).TotalSeconds} s");
+            Console.WriteLine($"Time to process {WaitNum:n0} trigger coroutine with average wait time {AverageWaitTime:n} by event scheduler: {(end - start).TotalSeconds} s");
 
         }
 
@@ -190,7 +190,7 @@ namespace Reactors.Performance
             }
             DateTime end = DateTime.UtcNow;
 
-            Console.WriteLine($"Time to process {WaitNum:n0} coroutine with average wait time {AverageWaitTime:n} by event scheduler: {(end - start).TotalSeconds} s");
+            Console.WriteLine($"Time to process {WaitNum:n0} *polling wait* coroutine with average wait time {AverageWaitTime:n} by event scheduler: {(end - start).TotalSeconds} s");
 
         }
     }

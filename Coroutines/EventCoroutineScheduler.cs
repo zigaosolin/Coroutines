@@ -22,17 +22,14 @@ namespace Coroutines
     {
     }
 
+
     internal class ContinueCoroutineEvent : ICoroutineEvent
     {
-        public Coroutine Coroutine { get; }
-        public IWaitObject WaitForObject { get; }
-        public IEnumerator<IWaitObject> Iterator { get; }
+        public long CoroutineID { get; }
 
-        public ContinueCoroutineEvent(Coroutine coroutine, IWaitObject waitForObject, IEnumerator<IWaitObject> iterator)
+        public ContinueCoroutineEvent(long coroutineID)
         {
-            Coroutine = coroutine;
-            WaitForObject = waitForObject;
-            Iterator = iterator;
+            CoroutineID = coroutineID;
         }
     }
 
@@ -46,6 +43,14 @@ namespace Coroutines
         }
     }
 
+    internal class EventCoroutineState
+    {
+        public long CoroutineID { get; set; }
+        public Coroutine Coroutine { get; set; }
+        public IWaitObject WaitForObject { get; set; }
+        public IEnumerator<IWaitObject> Iterator { get; set; }
+    }
+
     // This implementation will queue all continuations into one
     // event poll. This event poll can be used for other events
     // as well. You need to call update with the next event that
@@ -57,6 +62,9 @@ namespace Coroutines
         EventExecutionState executionState = new EventExecutionState();
         TimerTrigger<ContinueCoroutineEvent> timerTrigger = new TimerTrigger<ContinueCoroutineEvent>();
         int updateThreadID = -1;
+
+        long currentCoroutineID = 0;
+        Dictionary<long, EventCoroutineState> runningCoroutines = new Dictionary<long, EventCoroutineState>();
 
         public EventCoroutineScheduler(IEventPusher eventQueue)
         {
@@ -73,7 +81,7 @@ namespace Coroutines
 
         public void Execute(Coroutine coroutine)
         {
-            coroutine.SignalStarted(this, executionState, null);
+            coroutine.SignalStarted(this, executionState, null);          
             var ev = new StartCoroutineEvent(coroutine);
             eventQueue.Enqueue(ev);
         }
@@ -122,9 +130,11 @@ namespace Coroutines
 
         private void ContinueCoroutine(ContinueCoroutineEvent cce)
         {
-            var coroutine = cce.Coroutine;
-            var waitForObject = cce.WaitForObject;
-            var iterator = cce.Iterator;
+            var state = runningCoroutines[cce.CoroutineID];
+
+            var coroutine = state.Coroutine;
+            var waitForObject = state.WaitForObject;
+            var iterator = state.Iterator;
 
             // If we need to poll wait object, this is done here (no notifies)
             if (waitForObject != null)
@@ -148,11 +158,15 @@ namespace Coroutines
                 waitForObject = null;
             }
 
-            AdvanceCoroutine(coroutine, iterator);
+            if(AdvanceCoroutine(state.CoroutineID, coroutine, iterator))
+            {
+                // We remove it if completed
+                runningCoroutines.Remove(state.CoroutineID);
+            }
         }
 
 
-        private bool AdvanceCoroutine(Coroutine coroutine, IEnumerator<IWaitObject> iterator)
+        private bool AdvanceCoroutine(long coroutineID, Coroutine coroutine, IEnumerator<IWaitObject> iterator)
         {
             while (true)
             {
@@ -190,14 +204,14 @@ namespace Coroutines
                 // Special case null means wait to next frame
                 if (newWait is WaitForSeconds waitForSeconds)
                 {
-                    timerTrigger.AddTrigger(waitForSeconds.WaitTime, new ContinueCoroutineEvent(coroutine, null, iterator));
+                    timerTrigger.AddTrigger(waitForSeconds.WaitTime, new ContinueCoroutineEvent(coroutineID));
                     return false;
                 }
 
                 // Special case null means wait to next frame
                 if (newWait == null)
                 {
-                    eventQueue.EnqueueNextFrame(new ContinueCoroutineEvent(coroutine, null, iterator));
+                    eventQueue.EnqueueNextFrame(new ContinueCoroutineEvent(coroutineID));
                     return false;
                 }
                 else if (newWait is ReturnValue retVal)
@@ -238,7 +252,7 @@ namespace Coroutines
                     withCompletion.RegisterCompleteSignal(
                         () =>
                         {
-                            eventQueue.Enqueue(new ContinueCoroutineEvent(coroutine, null, iterator));
+                            eventQueue.Enqueue(new ContinueCoroutineEvent(coroutineID));
                         });
                 }
 
@@ -249,7 +263,20 @@ namespace Coroutines
         private void StartAndMakeFirstIteration(Coroutine coroutine)
         {           
             var iterator = coroutine.Execute();
-            AdvanceCoroutine(coroutine, iterator);        
+
+            var state = new EventCoroutineState()
+            {
+                CoroutineID = currentCoroutineID++,
+                Coroutine = coroutine,
+                Iterator = iterator
+            };
+
+            
+            if(!AdvanceCoroutine(state.CoroutineID, coroutine, iterator))
+            {
+                // We add it to running coroutines if not completed
+                runningCoroutines.Add(state.CoroutineID, state);
+            }
         }
     }
 }
