@@ -33,12 +33,12 @@ namespace Reactors
             }
         }
 
-        public void Update(float deltaTime)
+        public void Update(float deltaTime, int maxEvents = int.MaxValue)
         {
             eventQueue.NewFrame();
             scheduler.NewFrame(deltaTime);
 
-            while(true)
+            for(int i = 0; i < maxEvents; i++)
             {
                 if (!eventQueue.TryDequeue(out IEvent ev))
                     break;

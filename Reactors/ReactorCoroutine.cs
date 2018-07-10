@@ -38,4 +38,16 @@ namespace Reactors
         }
 
     }
+
+    public abstract class ReactorCoroutine<TReactor> : ReactorCoroutine
+        where TReactor : Reactor
+    {
+        public new TReactor Reactor
+        {
+            get
+            {
+                return (TReactor)base.Reactor;
+            }
+        }
+    }
 }
