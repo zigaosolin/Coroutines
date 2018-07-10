@@ -5,18 +5,18 @@ using System.Text;
 
 namespace Coroutines.Implementation
 {
-    struct SmartTimerKey : IComparable<SmartTimerKey>
+    struct TimerKey : IComparable<TimerKey>
     {
         public long TimeInTicks;
         public int SecondarySort;
 
-        public SmartTimerKey(long timeInTicks, int secondaryID)
+        public TimerKey(long timeInTicks, int secondaryID)
         {
-            this.TimeInTicks = timeInTicks;
-            this.SecondarySort = secondaryID;
+            TimeInTicks = timeInTicks;
+            SecondarySort = secondaryID;
         }
 
-        public int CompareTo(SmartTimerKey other)
+        public int CompareTo(TimerKey other)
         {
             int result = TimeInTicks.CompareTo(other.TimeInTicks);
             if (result != 0)
@@ -26,22 +26,22 @@ namespace Coroutines.Implementation
         }
     }
 
-    internal class SmartTimerTrigger
+    internal class TimerTrigger<TCoroutineContinuationData>
     {
         long currentTime = 0;
         int currentSecondaryID;
-        SortedDictionary<SmartTimerKey, CoroutineState> triggers = new SortedDictionary<SmartTimerKey, CoroutineState>();
+        SortedDictionary<TimerKey, TCoroutineContinuationData> triggers = new SortedDictionary<TimerKey, TCoroutineContinuationData>();
 
-        public void Update(float deltaTime, ConcurrentQueue<CoroutineState> trigerredCoroutines)
+        public void Update(float deltaTime, Action<TCoroutineContinuationData> triggerAction)
         {
             currentTime += (long)(deltaTime * 1000);
 
-            List<SmartTimerKey> toRemoveList = new List<SmartTimerKey>();
+            List<TimerKey> toRemoveList = new List<TimerKey>();
             foreach(var trigger in triggers)
             {
                 if(trigger.Key.TimeInTicks <= currentTime)
                 {
-                    trigerredCoroutines.Enqueue(trigger.Value);
+                    triggerAction(trigger.Value);
                     toRemoveList.Add(trigger.Key);
                     continue;
                 }
@@ -54,10 +54,10 @@ namespace Coroutines.Implementation
             }
         }
 
-        public void AddTrigger(float waitForSeconds, CoroutineState coroutine)
+        public void AddTrigger(float waitForSeconds, TCoroutineContinuationData data)
         {
             long timeStamp = currentTime + (long)(waitForSeconds * 1000);
-            triggers.Add(new SmartTimerKey(timeStamp, currentSecondaryID++), coroutine);
+            triggers.Add(new TimerKey(timeStamp, currentSecondaryID++), data);
         }
     }
 }

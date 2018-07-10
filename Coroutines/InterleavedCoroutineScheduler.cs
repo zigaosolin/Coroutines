@@ -32,7 +32,7 @@ namespace Coroutines
         ConcurrentQueue<CoroutineState> trigerredCoroutines = new ConcurrentQueue<CoroutineState>();
         ConcurrentQueue<CoroutineState> enqueuedCoroutines = new ConcurrentQueue<CoroutineState>();
         InterleavedExecutionState executionState = new InterleavedExecutionState();
-        SmartTimerTrigger timerTrigger = new SmartTimerTrigger();
+        TimerTrigger<CoroutineState> timerTrigger = new TimerTrigger<CoroutineState>();
         volatile int updateThreadID = -1;
 
         public void Execute(Coroutine coroutine)
@@ -77,7 +77,9 @@ namespace Coroutines
             updateThreadID = Thread.CurrentThread.ManagedThreadId;
 
             executionState.Update(deltaTime, executionState.FrameIndex + 1);
-            timerTrigger.Update(deltaTime, trigerredCoroutines);
+            timerTrigger.Update(deltaTime, 
+                (CoroutineState state) => trigerredCoroutines.Enqueue(state)
+            );
 
             // Also dequeue all trigerred coroutines
             while (true)

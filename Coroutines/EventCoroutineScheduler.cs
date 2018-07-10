@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Coroutines.Implementation;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading;
@@ -54,6 +55,7 @@ namespace Coroutines
     {
         IEventPusher eventQueue;
         EventExecutionState executionState = new EventExecutionState();
+        TimerTrigger<ContinueCoroutineEvent> timerTrigger = new TimerTrigger<ContinueCoroutineEvent>();
         int updateThreadID = -1;
 
         public EventCoroutineScheduler(IEventPusher eventQueue)
@@ -64,6 +66,9 @@ namespace Coroutines
         public void NewFrame(float deltaTime)
         {
             executionState.Update(deltaTime);
+            timerTrigger.Update(deltaTime,
+                (ContinueCoroutineEvent ev) => eventQueue.Enqueue(ev)
+            );
         }
 
         public void Execute(Coroutine coroutine)
@@ -181,6 +186,13 @@ namespace Coroutines
                 }
 
                 IWaitObject newWait = iterator.Current;
+
+                // Special case null means wait to next frame
+                if (newWait is WaitForSecondsCoroutine waitForSeconds)
+                {
+                    timerTrigger.AddTrigger(waitForSeconds.WaitTime, new ContinueCoroutineEvent(coroutine, null, iterator));
+                    return false;
+                }
 
                 // Special case null means wait to next frame
                 if (newWait == null)
