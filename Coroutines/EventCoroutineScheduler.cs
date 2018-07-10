@@ -1,4 +1,5 @@
 ﻿using Coroutines.Implementation;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -56,9 +57,11 @@ namespace Coroutines
     // as well. You need to call update with the next event that
     // is dequeued from event poll. ICoroutineEvent as meant for
     // this scheduler
+    [JsonObject(MemberSerialization.Fields)]
     public class EventCoroutineScheduler : ICoroutineScheduler
     {
-        IEventPusher eventQueue;
+        public IEventPusher EventQueue { get; }
+
         EventExecutionState executionState = new EventExecutionState();
         TimerTrigger<ContinueCoroutineEvent> timerTrigger = new TimerTrigger<ContinueCoroutineEvent>();
         int updateThreadID = -1;
@@ -68,14 +71,14 @@ namespace Coroutines
 
         public EventCoroutineScheduler(IEventPusher eventQueue)
         {
-            this.eventQueue = eventQueue;
+            this.EventQueue = eventQueue;
         }
 
         public void NewFrame(float deltaTime)
         {
             executionState.Update(deltaTime);
             timerTrigger.Update(deltaTime,
-                (ContinueCoroutineEvent ev) => eventQueue.Enqueue(ev)
+                (ContinueCoroutineEvent ev) => EventQueue.Enqueue(ev)
             );
         }
 
@@ -83,7 +86,7 @@ namespace Coroutines
         {
             coroutine.SignalStarted(this, executionState, null);          
             var ev = new StartCoroutineEvent(coroutine);
-            eventQueue.Enqueue(ev);
+            EventQueue.Enqueue(ev);
         }
 
         public void ExecuteImmediately(Coroutine coroutine)
@@ -142,7 +145,7 @@ namespace Coroutines
                 if (!waitForObject.IsComplete)
                 {
                     // We are not finished, poll next frame
-                    eventQueue.EnqueueNextFrame(cce);
+                    EventQueue.EnqueueNextFrame(cce);
                     return;
                 }
 
@@ -211,7 +214,7 @@ namespace Coroutines
                 // Special case null means wait to next frame
                 if (newWait == null)
                 {
-                    eventQueue.EnqueueNextFrame(new ContinueCoroutineEvent(coroutineID));
+                    EventQueue.EnqueueNextFrame(new ContinueCoroutineEvent(coroutineID));
                     return false;
                 }
                 else if (newWait is ReturnValue retVal)
@@ -252,7 +255,7 @@ namespace Coroutines
                     withCompletion.RegisterCompleteSignal(
                         () =>
                         {
-                            eventQueue.Enqueue(new ContinueCoroutineEvent(coroutineID));
+                            EventQueue.Enqueue(new ContinueCoroutineEvent(coroutineID));
                         });
                 }
 

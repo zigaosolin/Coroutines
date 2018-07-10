@@ -312,10 +312,5 @@ namespace Coroutines.Tests
             scheduler.Update(0.11f);
         }
 
-        [Fact]
-        public void SchedulerCoroutines()
-        {
-
-        }
     }
 }

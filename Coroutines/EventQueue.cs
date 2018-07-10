@@ -1,15 +1,22 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text;
 
 namespace Coroutines
 {
+    [JsonObject(MemberSerialization.Fields)]
     public class EventQueue : IEventPusher
     {
         object syncRoot = new object();
         Queue<IEvent> updateQueue = new Queue<IEvent>();
         Queue<IEvent> nextFrameQueue = new Queue<IEvent>();
+        
+        public EventQueue()
+        {
+        }
+
 
         public void Enqueue(IEvent ev)
         {

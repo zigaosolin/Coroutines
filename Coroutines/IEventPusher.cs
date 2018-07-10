@@ -1,9 +1,11 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace Coroutines
 {
+    [JsonObject(MemberSerialization.Fields)]
     public interface IEvent
     {
     }

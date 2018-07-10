@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Linq;
 using System.Threading;
+using Newtonsoft.Json;
 
 namespace Coroutines
 {
@@ -17,6 +18,7 @@ namespace Coroutines
         CompletedWithException
     }
 
+    [JsonObject(MemberSerialization.Fields)]
     public abstract class Coroutine : IWaitObject, IWaitObjectWithNotifyCompletion
     {
         internal object SyncRoot { get; } = new object();
