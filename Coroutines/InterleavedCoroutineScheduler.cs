@@ -206,7 +206,7 @@ namespace Coroutines
                 executingCoroutine.WaitForObject = newWait;
 
                 // Special case null means wait to next frame
-                if(newWait is WaitForSecondsCoroutine waitForSeconds)
+                if(newWait is WaitForSeconds waitForSeconds)
                 {
                     // The wait object is set to null, we bypass it and use trigger instead
                     executingCoroutine.WaitForObject = null;

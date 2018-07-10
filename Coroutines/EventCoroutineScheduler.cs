@@ -188,7 +188,7 @@ namespace Coroutines
                 IWaitObject newWait = iterator.Current;
 
                 // Special case null means wait to next frame
-                if (newWait is WaitForSecondsCoroutine waitForSeconds)
+                if (newWait is WaitForSeconds waitForSeconds)
                 {
                     timerTrigger.AddTrigger(waitForSeconds.WaitTime, new ContinueCoroutineEvent(coroutine, null, iterator));
                     return false;

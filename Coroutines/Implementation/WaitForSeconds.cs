@@ -4,26 +4,17 @@ using System.Text;
 
 namespace Coroutines.Implementation
 {
-    internal class WaitForSecondsCoroutine : Coroutine
+    internal class WaitForSeconds : IWaitObject
     {
         public float WaitTime { get; }
 
-        public WaitForSecondsCoroutine(float seconds)
+        public bool IsComplete => false;
+
+        public Exception Exception => null;
+
+        public WaitForSeconds(float seconds)
         {
             WaitTime = seconds;
-        }
-
-        protected internal override IEnumerator<IWaitObject> Execute()
-        {
-            // Scheduler usually implements special override for this coroutine
-            // so there is no polling, i.e. this is never executed
-
-            float time = 0.0f;
-            while (time < WaitTime)
-            {
-                yield return null;
-                time += ExecutionState.DeltaTime;
-            }
         }
     }
 }
