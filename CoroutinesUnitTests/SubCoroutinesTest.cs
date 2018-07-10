@@ -165,7 +165,7 @@ namespace Coroutines.Tests
 
             protected override IEnumerator<IWaitObject> Execute()
             {
-                Internal = Coroutines.FromEnumerator(ToCancelCoroutine());
+                Internal = Coroutine.FromEnumerator(ToCancelCoroutine());
                 yield return Internal;
             }
         }
@@ -200,7 +200,7 @@ namespace Coroutines.Tests
         public void Coroutine_WhenOnWaitObject()
         {
             var waitObject = new CustomWaitObject();
-            var coroutine = Coroutines.FromEnumerator(WaitForWaitObject(waitObject));
+            var coroutine = Coroutine.FromEnumerator(WaitForWaitObject(waitObject));
 
             var scheduler = new InterleavedCoroutineScheduler();
             scheduler.Execute(coroutine);

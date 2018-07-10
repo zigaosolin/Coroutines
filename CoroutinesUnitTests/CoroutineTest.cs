@@ -78,7 +78,7 @@ namespace Coroutines.Tests
                 Iteration = 1;
                 yield return null;
                 Iteration = 2;
-                yield return Coroutines.NextFrame(); // same as null
+                yield return NextFrame(); // same as null
                 Iteration = 3;
                 yield break;
             }

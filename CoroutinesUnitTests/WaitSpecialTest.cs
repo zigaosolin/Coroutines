@@ -13,7 +13,7 @@ namespace Coroutines.Tests
         {
             yield return null;
 
-            var threadWait = Coroutines.WaitForThread(
+            var threadWait = Coroutine.WaitForThread(
                 new Thread(
                     () => Thread.Sleep(100)
                 )
@@ -28,7 +28,7 @@ namespace Coroutines.Tests
 
             var scheduler = new InterleavedCoroutineScheduler();
 
-            var coroutine = Coroutines.FromEnumerator(CoroutineThread());
+            var coroutine = Coroutine.FromEnumerator(CoroutineThread());
             scheduler.Execute(coroutine);
 
             Assert.Equal(CoroutineStatus.Running, coroutine.Status);
@@ -53,7 +53,7 @@ namespace Coroutines.Tests
 
             protected override IEnumerator<IWaitObject> Execute()
             {
-                var asyncWait = Coroutines.WaitForAsync(TaskAsync());
+                var asyncWait = WaitForAsync(TaskAsync());
                 yield return asyncWait;
                 yield return CompleteWithResult(asyncWait.Result);
             }
@@ -79,10 +79,10 @@ namespace Coroutines.Tests
         {
             protected override IEnumerator<IWaitObject> Execute()
             {
-                yield return Coroutines.WaitForAny(
-                    Coroutines.WaitForAsync(Task.Delay(300)),
-                    Coroutines.WaitForAsync(Task.Delay(350)),
-                    Coroutines.WaitForAsync(Task.Delay(100))
+                yield return WaitForAny(
+                    WaitForAsync(Task.Delay(300)),
+                    WaitForAsync(Task.Delay(350)),
+                    WaitForAsync(Task.Delay(100))
                     );
             }
         }
@@ -108,10 +108,10 @@ namespace Coroutines.Tests
         {
             protected override IEnumerator<IWaitObject> Execute()
             {
-                yield return Coroutines.WaitForAll(
-                    Coroutines.WaitForAsync(Task.Delay(300)),
-                    Coroutines.WaitForAsync(Task.Delay(350)),
-                    Coroutines.WaitForAsync(Task.Delay(100))
+                yield return WaitForAll(
+                    WaitForAsync(Task.Delay(300)),
+                    WaitForAsync(Task.Delay(350)),
+                    WaitForAsync(Task.Delay(100))
                     );
             }
         }
@@ -155,7 +155,7 @@ namespace Coroutines.Tests
             {
                 if (childrenToStart != null)
                 {
-                    yield return Coroutines.WaitForAnyCancelOthers(
+                    yield return WaitForAnyCancelOthers(
                         childrenToStart
                         );
                 }
@@ -200,9 +200,9 @@ namespace Coroutines.Tests
         {
             protected override IEnumerator<IWaitObject> Execute()
             {
-                yield return Coroutines.WaitForAll(
-                    Coroutines.WaitForAsync(Task.Run(() => throw new Exception("Internal exception"))),
-                    Coroutines.WaitForAsync(Task.Delay(350))
+                yield return WaitForAll(
+                    WaitForAsync(Task.Run(() => throw new Exception("Internal exception"))),
+                    WaitForAsync(Task.Delay(350))
                     );
             }
         }

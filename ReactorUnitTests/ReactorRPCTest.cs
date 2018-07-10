@@ -35,7 +35,7 @@ namespace Reactors.Tests
             {
                 this.dest = dest;
 
-                Execute(Coroutines.Coroutines.FromEnumerator(SendRPC()));
+                Execute(Coroutine.FromEnumerator(SendRPC()));
             }
 
             protected override void OnEvent(IReactorEvent ev)

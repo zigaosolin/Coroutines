@@ -21,7 +21,7 @@ namespace Coroutines.Tests
             protected override IEnumerator<IWaitObject> Execute()
             {
                 Iteration = 0;
-                yield return Coroutines.WaitForSeconds(time);
+                yield return Coroutine.WaitForSeconds(time);
                 Iteration = 1;
             }
         }
