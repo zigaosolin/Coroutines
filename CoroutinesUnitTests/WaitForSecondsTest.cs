@@ -51,7 +51,7 @@ namespace Coroutines.Tests
         {
             var scheduler = new InterleavedCoroutineScheduler();
 
-            Random random = new Random();
+            Random random = new Random(31321);
             List<WaitCoroutine> coroutines = new List<WaitCoroutine>();
             for(int i = 0; i < 100; i++)
             {
