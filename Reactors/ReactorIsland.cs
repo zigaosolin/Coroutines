@@ -15,6 +15,8 @@ namespace Reactors
         TimeSpan desiredDeltaTime = new TimeSpan(0);
         bool stopRequested = false;
 
+        public Thread Thread { get; private set; }
+
         public ReactorIsland(params Reactor[] reactors)
         {
             this.reactors = reactors.ToList();
@@ -92,7 +94,9 @@ namespace Reactors
             isRunning = true;
             this.desiredDeltaTime = TimeSpan.FromSeconds(desiredDeltaTime);
 
-            return new Thread(ThreadStart);
+            Thread = new Thread(ThreadStart);
+            Thread.Start();
+            return Thread;
         }
 
         public void RequestStop()

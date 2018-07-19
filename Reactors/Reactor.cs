@@ -33,8 +33,9 @@ namespace Reactors
             }
         }
 
-        public void Update(float deltaTime, int maxEvents = int.MaxValue)
+        public int Update(float deltaTime, int maxEvents = int.MaxValue, bool startNewEvents = true)
         {
+            int eventsProcessed = 0;
             eventQueue.NewFrame();
             scheduler.NewFrame(deltaTime);
 
@@ -45,16 +46,19 @@ namespace Reactors
 
                 if(ev is ICoroutineEvent cev)
                 {
+                    eventsProcessed++;
                     scheduler.Update(cev);
                 }
                 else if(ev is FullReactorEvent rev)
                 {
                     if(rev.ReplyID != 0)
                     {
-                        if(pendingRPCWaits.TryGetValue(rev.ReplyID, out RPCWait value))
+                        eventsProcessed++;
+
+                        if (pendingRPCWaits.TryGetValue(rev.ReplyID, out RPCWait value))
                         {
                             pendingRPCWaits.Remove(rev.ReplyID);
-                            value.Trigger(rev);
+                            value.Trigger(rev);  
                             continue;
                         }
 
@@ -62,16 +66,26 @@ namespace Reactors
                         continue;
                     }
 
-                    currentEvent = rev;
-                    OnEvent(rev.Event);
-                    currentEvent = null;
+                    if (startNewEvents)
+                    {
+                        currentEvent = rev;
+                        OnEvent(rev.Event);
+                        currentEvent = null;
+                    } else
+                    {
+                        eventQueue.EnqueueNextFrame(rev);
+                    }
                 }
                 else
                 {
                     throw new ReactorException("Invalid event type");
                 }
             }
+
+            return eventsProcessed;
         }
+
+        
 
         protected abstract void OnEvent(IReactorEvent ev);
 

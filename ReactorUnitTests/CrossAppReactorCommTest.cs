@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Reactors.Tests
 {
-    class ReactorReplayTest
+    class CrossAppReactorCommTest
     {
     }
 }
