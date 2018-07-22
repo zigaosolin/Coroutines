@@ -5,40 +5,51 @@ using System.Collections.Generic;
 
 namespace Reactors
 {
-    public abstract class ReactorBase : IReactorReference
+    public abstract class ReactorBase
     {
         EventQueue eventQueue;
         EventCoroutineScheduler scheduler;
         FullReactorEvent currentEvent;
         IReactorListener listener;
-        string uniqueName;
+        
         long sendEventID = 1;
         SortedDictionary<long, RPCWait> pendingRPCWaits = new SortedDictionary<long, RPCWait>();
         bool currentInCriticalSection = false;
         Exception criticalException = null;
 
+        public ReactorRepository Repository { get; private set; }
+        public IReactorReference Reference { get; private set; }
+        public string Name { get; }
+
         public object State { get; }
 
         internal ReactorBase(string uniqueName, object reactorState, IReactorListener listener)
         {
-            this.uniqueName = uniqueName;
+            Name = uniqueName;
             State = reactorState;
             eventQueue = new EventQueue();
             scheduler = new EventCoroutineScheduler(eventQueue);
             this.listener = listener;
         }
 
+        internal void AttachedToRepository(IReactorReference selfReference, ReactorRepository repository)
+        {
+            if (Repository != null)
+                throw new ReactorException("Already attached to repository");
+
+            Repository = repository;
+            Reference = selfReference;
+        }
+
+        internal void DetachedFromRepository()
+        {
+            Repository = null;
+            Reference = null;
+        }
+
         public void Enqueue(IReactorReference source, IReactorEvent ev, long eventID = 0, long replyID = 0)
         {
             eventQueue.Enqueue(new FullReactorEvent(ev, source, eventID, replyID));
-        }
-
-        public IReactorReference Reference
-        {
-            get
-            {
-                return this;
-            }
         }
 
         public int Update(float deltaTime, int maxEvents = int.MaxValue, bool startNewEvents = true)
@@ -167,12 +178,12 @@ namespace Reactors
 
         protected void Reply(IReactorEvent ev)
         {
-            EventSource.Send(this, ev, GetNextEventID(), ReplyID);
+            EventSource.Send(Reference, ev, GetNextEventID(), ReplyID);
         }
 
         protected void Reply(IReactorEvent ev, long replyID)
         {
-            EventSource.Send(this, ev, GetNextEventID(), replyID);
+            EventSource.Send(Reference, ev, GetNextEventID(), replyID);
         }
 
         internal long GetNextEventID()
@@ -182,7 +193,7 @@ namespace Reactors
 
         protected internal RPCWait ReplyRPC(IReactorEvent ev)
         {
-            var data = new FullReactorEvent(ev, this, GetNextEventID(), ReplyID);
+            var data = new FullReactorEvent(ev, Reference, GetNextEventID(), ReplyID);
             var wait = new RPCWait(data, EventSource);
             pendingRPCWaits.Add(data.EventID, wait);
 
@@ -193,7 +204,7 @@ namespace Reactors
 
         protected internal RPCWait ReplyRPC(IReactorEvent ev, long replyID)
         {
-            var data = new FullReactorEvent(ev, this, GetNextEventID(), replyID);
+            var data = new FullReactorEvent(ev, Reference, GetNextEventID(), replyID);
             var wait = new RPCWait(data, EventSource);
             pendingRPCWaits.Add(data.EventID, wait);
 
@@ -203,7 +214,7 @@ namespace Reactors
 
         protected internal RPCWait RPC(IReactorReference dest, IReactorEvent ev)
         {
-            var data = new FullReactorEvent(ev, this, GetNextEventID(), 0);
+            var data = new FullReactorEvent(ev, Reference, GetNextEventID(), 0);
             var wait = new RPCWait(data, dest);
             pendingRPCWaits.Add(data.EventID, wait);
 
@@ -211,13 +222,6 @@ namespace Reactors
 
             return wait;
         }
-
-        void IReactorReference.Send(IReactorReference source, IReactorEvent ev, long eventID, long replyID)
-        {
-            Enqueue(source, ev, eventID, replyID);
-        }
-
-        string IReactorReference.UniqueName => uniqueName;
 
         public object ReactorState => State;
     }

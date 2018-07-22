@@ -16,7 +16,7 @@ namespace Reactors
 
         public Thread Thread { get; private set; }
 
-        public ReactorIsland(params ReactorBase[] reactors)
+        internal ReactorIsland(params ReactorBase[] reactors)
         {
             foreach(var reactor in reactors)
             {
@@ -40,7 +40,7 @@ namespace Reactors
         {
             lock(syncRoot)
             {
-                reactors.Add(reactor.Reference.UniqueName, reactor);
+                reactors.Add(reactor.Reference.Reference, reactor);
             }
         }
 
@@ -48,7 +48,7 @@ namespace Reactors
         {
             lock(syncRoot)
             {
-                return reactors.Remove(reactor.Reference.UniqueName);
+                return reactors.Remove(reactor.Reference.Reference);
             }
         }
 

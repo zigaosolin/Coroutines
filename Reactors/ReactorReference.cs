@@ -6,7 +6,7 @@ namespace Reactors
 {
     public interface IReactorReference
     {
-        string UniqueName { get; }
+        string Reference { get; }
         void Send(IReactorReference source, IReactorEvent ev, long eventID, long replyID);
     }
 }

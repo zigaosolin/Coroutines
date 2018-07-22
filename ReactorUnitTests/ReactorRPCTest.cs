@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace Reactors.Tests
@@ -65,14 +66,15 @@ namespace Reactors.Tests
         }
 
         [Fact]
-        public void RPC()
+        public async Task RPC()
         {
+            var reactorRepo = ReactorRepository.CreateLocal(1);
             var responseReactor = new ResponseReactor();
-            var requestReactor = new RPCReactor(responseReactor);
+            reactorRepo.Add(responseReactor);
+            var requestReactor = new RPCReactor(reactorRepo.Resolve(responseReactor));
+            reactorRepo.Add(requestReactor);
 
-            requestReactor.Update(0);
-            responseReactor.Update(0);
-            requestReactor.Update(0);
+            await Task.Delay(100);
 
             Assert.True(requestReactor.State.ResponseGained);
 

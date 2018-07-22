@@ -74,7 +74,7 @@ namespace Chat.Server
             // May throw, as we are not in critical section it is ok
             if (State.UsernameToPlayer.TryGetValue(ev.Username, out Tuple<string, IReactorReference> result))
             {
-                Reply(new CreatePlayerResponse("Username already exists");
+                Reply(new CreatePlayerResponse("Username already exists"));
                 return;
             }
 

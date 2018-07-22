@@ -15,12 +15,12 @@ namespace Reactors
 
         protected void Reply(IReactorEvent ev)
         {
-            Source.Send(Reactor, ev, Reactor.GetNextEventID(),  ReplyID);
+            Source.Send(Reactor.Reference, ev, Reactor.GetNextEventID(),  ReplyID);
         }
 
         protected void Reply(IReactorEvent ev, long replyID)
         {
-            Source.Send(Reactor, ev, Reactor.GetNextEventID(), replyID);
+            Source.Send(Reactor.Reference, ev, Reactor.GetNextEventID(), replyID);
         }
 
         protected RPCWait ReplyRPC(IReactorEvent ev)
