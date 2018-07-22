@@ -9,7 +9,7 @@ namespace Chat.Server
         static void Main(string[] args)
         {
             // Createa a global reactor repository
-            ReactorRepository.CreateGlobal(2, useTasks: true);
+            ReactorRepository.CreateGlobal(2, useTasks: false);
             ReactorRepository.Global.Add(new PlayerDiscoveryReactor());
 
             // Reactor event sink is useful for handling events outside reactor (test cases)
@@ -106,7 +106,7 @@ namespace Chat.Server
                     null)
             );
 
-            Thread.Sleep(100);
+            Thread.Sleep(1000);
 
             ev = source.Dequeue();
             switch (ev)

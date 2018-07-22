@@ -80,7 +80,7 @@ namespace Chat.Server
             protected override IEnumerator<IWaitObject> Execute()
             {
                 var wait = RPC(Event.OtherPlayer, new PlayerInternalInvite());
-                yield return null;
+                yield return wait;
                 if(wait.Response is OK)
                 {
                     Reply(new OK());
