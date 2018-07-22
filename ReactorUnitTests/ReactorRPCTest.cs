@@ -16,11 +16,15 @@ namespace Reactors.Tests
         {
         }
 
-        class RPCReactor : Reactor
+        class RPCReactorState
+        {
+            public bool ResponseGained { get; set; }
+        }
+
+        class RPCReactor : Reactor<RPCReactorState>
         {
             IReactorReference dest;
-            public bool ResponseGained { get; private set; }
-
+            
             IEnumerator<IWaitObject> SendRPC()
             {
                 // We "abuse" RPC's reactor RPC here, otherwise we would need to
@@ -28,7 +32,7 @@ namespace Reactors.Tests
                 var rpc = RPC(dest, new SendEvent());
                 yield return rpc;
                 Assert.IsType<ResponseEvent>(rpc.Response);
-                ResponseGained = true;
+                State.ResponseGained = true;
             }
 
             public RPCReactor(IReactorReference dest)
@@ -43,7 +47,7 @@ namespace Reactors.Tests
             }
         }
 
-        class ResponseReactor : Reactor
+        class ResponseReactor : Reactor<object>
         {
             protected override void OnEvent(IReactorEvent ev)
             {
@@ -64,7 +68,7 @@ namespace Reactors.Tests
             responseReactor.Update(0);
             requestReactor.Update(0);
 
-            Assert.True(requestReactor.ResponseGained);
+            Assert.True(requestReactor.State.ResponseGained);
 
         }
 

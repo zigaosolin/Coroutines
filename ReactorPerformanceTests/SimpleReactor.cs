@@ -4,16 +4,19 @@
     {
     }
 
-    public class SimpleReactor : Reactor
+    class SimpleReactorState
     {
-        public long EventsProcessed { get; private set; } = 0;
+        public long EventsProcessed { get; set; } = 0;
+    }
 
+    class SimpleReactor : Reactor<SimpleReactorState>
+    {
         protected override void OnEvent(IReactorEvent ev)
         {
             switch(ev)
             {
                 case SimpleEvent sev:
-                    EventsProcessed++;
+                    State.EventsProcessed++;
                     break;
 
             }

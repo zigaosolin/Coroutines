@@ -19,16 +19,19 @@ namespace Reactors.Tests
             }
         }
 
-        class Reactor1 : Reactor
+        class Reactor1State
         {
-            public string Data { get; private set; }
+            public string Data { get; set; }
+        }
 
+        class Reactor1 : Reactor<Reactor1State>
+        {
             protected override void OnEvent(IReactorEvent ev)
             {
                 switch (ev)
                 {
                     case Event1 ev1:
-                        Data = ev1.Data;
+                        State.Data = ev1.Data;
                         break;
                     default:
                         throw new Exception("Invalid event");
@@ -54,8 +57,8 @@ namespace Reactors.Tests
             island.RequestStop();
             await islandTask;
 
-            Assert.Equal("0", ((Reactor1)island.Reactors[0]).Data);
-            Assert.Equal("1", ((Reactor1)island.Reactors[1]).Data);
+            Assert.Equal("0", ((Reactor1)island.Reactors[0]).State.Data);
+            Assert.Equal("1", ((Reactor1)island.Reactors[1]).State.Data);
         }
 
         [Fact]
@@ -76,8 +79,8 @@ namespace Reactors.Tests
             island.RequestStop();
             thread.Join();
 
-            Assert.Equal("0", ((Reactor1)island.Reactors[0]).Data);
-            Assert.Equal("1", ((Reactor1)island.Reactors[1]).Data);
+            Assert.Equal("0", ((Reactor1)island.Reactors[0]).State.Data);
+            Assert.Equal("1", ((Reactor1)island.Reactors[1]).State.Data);
         }
 
     }

@@ -5,18 +5,20 @@ using Coroutines;
 
 namespace Reactors.Performance
 {
-
-
-    public class CoroutineResponseReactor : Reactor
+    class CoroutineResponseReactorState
     {
-        public long EventsProcessed { get; private set; } = 0;
+        public long EventsProcessed { get; set; } = 0;
+    }
 
-        class ResponseCoroutine : ReactorCoroutine<CoroutineResponseReactor>
+    class CoroutineResponseReactor : Reactor<CoroutineResponseReactorState>
+    {
+
+        class ResponseCoroutine : ReactorCoroutine<CoroutineResponseReactorState>
         {
             protected override IEnumerator<IWaitObject> Execute()
             {
                 yield return null;
-                Reactor.EventsProcessed++;
+                State.EventsProcessed++;
             }
         }
 

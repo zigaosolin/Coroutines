@@ -20,16 +20,20 @@ namespace Reactors.Tests
             }
         }
 
-        class Reactor1 : Reactor
+        class Reactor1State
         {
-            public string Data { get; private set; }
+            public string Data { get; set; }
+        }
+
+        class Reactor1 : Reactor<Reactor1State>
+        {
 
             protected override void OnEvent(IReactorEvent ev)
             {
                 switch(ev)
                 {
                     case Event1 ev1:
-                        Data = ev1.Data;
+                        State.Data = ev1.Data;
                         break;
                     default:
                         throw new Exception("Invalid event");
@@ -43,10 +47,10 @@ namespace Reactors.Tests
             var reactor = new Reactor1();
 
             reactor.Update(0.1f);
-            Assert.Null(reactor.Data);
+            Assert.Null(reactor.State.Data);
             reactor.Enqueue(null, new Event1("abc"));
             reactor.Update(0.1f);
-            Assert.Equal("abc", reactor.Data);
+            Assert.Equal("abc", reactor.State.Data);
         }
 
         class Event2 : IReactorEvent
@@ -54,14 +58,17 @@ namespace Reactors.Tests
             public IReactorReference Source => null;
         }
 
-        class Reactor2 : Reactor
+        class Reactor2State
         {
-            public bool ReceivedEvent2 { get; private set; }
+            public bool ReceivedEvent2 { get; set; }
+        }
 
+        class Reactor2 : Reactor<Reactor2State>
+        {
             class Coroutine1 : Coroutine
             {
-                Reactor reactor;
-                public Coroutine1(Reactor reactor)
+                ReactorBase reactor;
+                public Coroutine1(ReactorBase reactor)
                 {
                     this.reactor = reactor;
                 }
@@ -81,7 +88,7 @@ namespace Reactors.Tests
                         Execute(new Coroutine1(this));
                         break;
                     case Event2 ev2:
-                        ReceivedEvent2 = true;
+                        State.ReceivedEvent2 = true;
                         break;
                     default:
                         throw new Exception("Invalid event");
@@ -96,12 +103,12 @@ namespace Reactors.Tests
 
             reactor.Update(0.1f);
             reactor.Enqueue(null, new Event1("abc"));
-            Assert.False(reactor.ReceivedEvent2);
+            Assert.False(reactor.State.ReceivedEvent2);
             reactor.Update(0.1f);
-            Assert.False(reactor.ReceivedEvent2);
+            Assert.False(reactor.State.ReceivedEvent2);
             // We yield null so we reply next frame
             reactor.Update(0.1f);
-            Assert.True(reactor.ReceivedEvent2);
+            Assert.True(reactor.State.ReceivedEvent2);
         }
     }
 }

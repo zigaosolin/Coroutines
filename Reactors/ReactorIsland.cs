@@ -10,19 +10,19 @@ namespace Reactors
     {
         volatile bool isRunning = false;
         object syncRoot = new object();
-        List<Reactor> reactors = new List<Reactor>();
+        List<ReactorBase> reactors = new List<ReactorBase>();
 
         TimeSpan desiredDeltaTime = new TimeSpan(0);
         bool stopRequested = false;
 
         public Thread Thread { get; private set; }
 
-        public ReactorIsland(params Reactor[] reactors)
+        public ReactorIsland(params ReactorBase[] reactors)
         {
             this.reactors = reactors.ToList();
         }
 
-        public IReadOnlyList<Reactor> Reactors
+        public IReadOnlyList<ReactorBase> Reactors
         {
             get
             {
@@ -34,7 +34,7 @@ namespace Reactors
             }
         }
 
-        public void AddReactor(Reactor reactor)
+        public void AddReactor(ReactorBase reactor)
         {
             lock(syncRoot)
             {
@@ -42,7 +42,7 @@ namespace Reactors
             }
         }
 
-        public bool RemoveReactor(Reactor reactor)
+        public bool RemoveReactor(ReactorBase reactor)
         {
             lock(syncRoot)
             {

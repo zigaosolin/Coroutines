@@ -5,8 +5,12 @@ using System.Text;
 
 namespace Chat.Server
 {
+    class PlayerState
+    {
+        public string Name { get; set; }
+    }
 
-    class Player : Reactor
+    class Player : Reactor<PlayerState>
     {
         protected override void OnEvent(IReactorEvent ev)
         {

@@ -7,7 +7,8 @@ namespace Reactors
 {
     public abstract class ReactorCoroutine : Coroutine
     {
-        public Reactor Reactor { get; internal set; }
+        public ReactorBase Reactor { get; internal set; }
+        public object State { get; internal set; }
         public IReactorReference Source { get; internal set; }
         public IReactorEvent Event { get; internal set; }
         public long ReplyID { get; internal set; }
@@ -39,14 +40,14 @@ namespace Reactors
 
     }
 
-    public abstract class ReactorCoroutine<TReactor> : ReactorCoroutine
-        where TReactor : Reactor
+    public abstract class ReactorCoroutine<TReactorState> : ReactorCoroutine
+        where TReactorState : class, new()
     {
-        public new TReactor Reactor
+        public new TReactorState State
         {
             get
             {
-                return (TReactor)base.Reactor;
+                return (TReactorState)base.State;
             }
         }
     }

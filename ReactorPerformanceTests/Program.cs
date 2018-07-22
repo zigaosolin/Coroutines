@@ -40,7 +40,7 @@ namespace Reactors.Performance
             }
 
             DateTime start = DateTime.UtcNow;
-            while (reactor.EventsProcessed < EventsNum)
+            while (reactor.State.EventsProcessed < EventsNum)
             {
                 // We start 100 coroutines per frame here
                 reactor.Update(0, 100);
