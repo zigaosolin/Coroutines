@@ -26,7 +26,7 @@ namespace Reactors
             this.listener = listener;
         }
 
-        public void Enqueue(IReactorReference source, IReactorEvent ev, long eventID = 0 , long replyID = 0)
+        public void Enqueue(IReactorReference source, IReactorEvent ev, long eventID = 0, long replyID = 0)
         {
             eventQueue.Enqueue(new FullReactorEvent(ev, source, eventID, replyID));
         }
@@ -45,7 +45,7 @@ namespace Reactors
             eventQueue.NewFrame();
             scheduler.NewFrame(deltaTime);
 
-            for(int i = 0; i < maxEvents; i++)
+            for (int i = 0; i < maxEvents; i++)
             {
                 if (!eventQueue.TryDequeue(out IEvent ev))
                     break;
@@ -77,21 +77,9 @@ namespace Reactors
 
                             if (startNewEvents)
                             {
-                                // Reactor replication states are internal events that are handled
-                                // specially
-                                if (rev.Event is ReactorGetReplicatedStateEvent replicationRequested)
-                                {
-                                    currentEvent = rev;
-                                    InternalReplicate(rev);
-                                    currentEvent = null;
-                                    continue;
-                                }
-                                else
-                                {
-                                    currentEvent = rev;
-                                    OnEvent(rev.Event);
-                                    currentEvent = null;
-                                }
+                                currentEvent = rev;
+                                OnEvent(rev.Event);
+                                currentEvent = null;
                             }
                             else
                             {
@@ -108,22 +96,7 @@ namespace Reactors
         }
 
         protected abstract void OnEvent(IReactorEvent ev);
-
-        protected virtual object ReplicateState()
-        {
-            listener?.OnReplicationRequestedOnActorWithoutReplication(this);
-            return new object();
-        }
-
-        private void InternalReplicate(FullReactorEvent ev)
-        {
-            object result = ReplicateState();
-            Reply(new ReactorStateReplicated()
-            {
-                ReplicatedState = result
-            });      
-        }
-
+        
         protected void Execute(Coroutine coroutine)
         {
             scheduler.Execute(coroutine);
@@ -196,20 +169,6 @@ namespace Reactors
         {
             var data = new FullReactorEvent(ev, this, GetNextEventID(), 0);
             var wait = new RPCWait(data, dest);
-            pendingRPCWaits.Add(data.EventID, wait);
-
-            dest.Send(data.Source, data.Event, data.EventID, data.ReplyID);
-
-            return wait;
-        }
-
-        protected internal ReplicatedStateWait<TDestReplicatedState> GetReplicatedState<TDestReplicatedState>(IReactorReference dest)
-            where TDestReplicatedState : class, new()
-        {
-            var ev = new ReactorGetReplicatedStateEvent();
-
-            var data = new FullReactorEvent(ev, this, GetNextEventID(), 0);
-            var wait = new ReplicatedStateWait<TDestReplicatedState>(data, dest);
             pendingRPCWaits.Add(data.EventID, wait);
 
             dest.Send(data.Source, data.Event, data.EventID, data.ReplyID);

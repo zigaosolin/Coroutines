@@ -37,13 +37,6 @@ namespace Reactors
         {
             return Reactor.RPC(dest, ev);
         }
-
-        protected ReplicatedStateWait<TDestReplicatedState> GetReplicatedState<TDestReplicatedState>(IReactorReference dest)
-            where TDestReplicatedState : class, new()
-        {
-            return Reactor.GetReplicatedState<TDestReplicatedState>(dest);
-        }
-
     }
 
     public abstract class ReactorCoroutine<TReactorState> : ReactorCoroutine
