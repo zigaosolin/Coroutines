@@ -91,8 +91,6 @@ namespace Reactors
             return eventsProcessed;
         }
 
-        
-
         protected abstract void OnEvent(IReactorEvent ev);
 
         protected virtual object ReplicateState()
@@ -184,7 +182,7 @@ namespace Reactors
             Enqueue(source, ev, eventID, replyID);
         }
 
-        string IReactorReference.UniqueName => "";
+        string IReactorReference.UniqueName => uniqueName;
 
         public object ReactorState => State;
     }

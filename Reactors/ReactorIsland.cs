@@ -8,18 +8,20 @@ namespace Reactors
 {
     public class ReactorIsland
     {
-        volatile bool isRunning = false;
         object syncRoot = new object();
-        List<ReactorBase> reactors = new List<ReactorBase>();
-
+        Dictionary<string, ReactorBase> reactors = new Dictionary<string, ReactorBase>();     
         TimeSpan desiredDeltaTime = new TimeSpan(0);
         bool stopRequested = false;
+        public bool IsRunning { get; private set; } = false;
 
         public Thread Thread { get; private set; }
 
         public ReactorIsland(params ReactorBase[] reactors)
         {
-            this.reactors = reactors.ToList();
+            foreach(var reactor in reactors)
+            {
+                AddReactor(reactor);
+            }
         }
 
         public IReadOnlyList<ReactorBase> Reactors
@@ -29,7 +31,7 @@ namespace Reactors
                 lock (syncRoot)
                 {
                     // We need copy to be thread safe
-                    return reactors.ToList();
+                    return reactors.Values.ToList();
                 }
             }
         }
@@ -38,7 +40,7 @@ namespace Reactors
         {
             lock(syncRoot)
             {
-                reactors.Add(reactor);
+                reactors.Add(reactor.Reference.UniqueName, reactor);
             }
         }
 
@@ -46,14 +48,14 @@ namespace Reactors
         {
             lock(syncRoot)
             {
-                return reactors.Remove(reactor);
+                return reactors.Remove(reactor.Reference.UniqueName);
             }
         }
 
         public async Task RunAsTaskWithDelays(float desiredDeltaTime)
         {
             AssertNotRunning();
-            isRunning = true;
+            IsRunning = true;
             this.desiredDeltaTime = TimeSpan.FromSeconds(desiredDeltaTime);
 
             TimeSpan deltaTime = new TimeSpan(0);
@@ -69,7 +71,7 @@ namespace Reactors
                     float deltaTimeFloat = (float)deltaTime.TotalSeconds;
                     foreach (var reactor in reactors)
                     {
-                        reactor.Update(deltaTimeFloat);
+                        reactor.Value.Update(deltaTimeFloat);
                     }
                 }
 
@@ -85,13 +87,13 @@ namespace Reactors
                 }
             }
 
-            isRunning = false;
+            IsRunning = false;
         }
 
         public Thread RunAsThread(float desiredDeltaTime)
         {
             AssertNotRunning();
-            isRunning = true;
+            IsRunning = true;
             this.desiredDeltaTime = TimeSpan.FromSeconds(desiredDeltaTime);
 
             Thread = new Thread(ThreadStart);
@@ -101,20 +103,12 @@ namespace Reactors
 
         public void RequestStop()
         {
-            if(!isRunning)
+            if(!IsRunning)
             {
                 throw new ReactorException("Cannot stop reactor island, it is not running");
             }
 
             stopRequested = true;
-        }
-
-        public bool IsRunning
-        {
-            get
-            {
-                return isRunning;
-            }
         }
 
         void ThreadStart()
@@ -132,7 +126,7 @@ namespace Reactors
                     float deltaTimeFloat = (float)deltaTime.TotalSeconds;
                     foreach (var reactor in reactors)
                     {
-                        reactor.Update(deltaTimeFloat);
+                        reactor.Value.Update(deltaTimeFloat);
                     }
                 }
 
@@ -148,12 +142,12 @@ namespace Reactors
                 }
             }
 
-            isRunning = false;
+            IsRunning = false;
         }
 
         void AssertNotRunning()
         {
-            if(isRunning)
+            if(IsRunning)
             {
                 throw new ReactorException("Multiple Run* commands were issued on reactor island");
             }

@@ -26,8 +26,8 @@ namespace Reactors.Tests
 
         class Reactor1 : Reactor<Reactor1State>
         {
-            public Reactor1()
-                : base("Reactor1")
+            public Reactor1(string uniqueName)
+                : base(uniqueName)
             {
             }
 
@@ -48,7 +48,7 @@ namespace Reactors.Tests
         public async Task TwoReactors_TaskWithDelays()
         {
             var island = new ReactorIsland(
-                new Reactor1(), new Reactor1());
+                new Reactor1("1"), new Reactor1("2"));
 
             Task islandTask = Task.Run(async () => await island.RunAsTaskWithDelays(0.02f));
 
@@ -70,7 +70,7 @@ namespace Reactors.Tests
         public async Task TwoReactors_Thread()
         {
             var island = new ReactorIsland(
-                new Reactor1(), new Reactor1());
+                new Reactor1("1"), new Reactor1("2"));
 
             var thread = island.RunAsThread(0.02f);
 
