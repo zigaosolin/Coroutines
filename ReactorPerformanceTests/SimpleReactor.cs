@@ -11,6 +11,11 @@
 
     class SimpleReactor : Reactor<SimpleReactorState>
     {
+        public SimpleReactor()
+            : base("SimpleReactor")
+        {
+        }
+
         protected override void OnEvent(IReactorEvent ev)
         {
             switch(ev)

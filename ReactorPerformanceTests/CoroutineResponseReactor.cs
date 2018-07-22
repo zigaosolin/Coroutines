@@ -12,6 +12,10 @@ namespace Reactors.Performance
 
     class CoroutineResponseReactor : Reactor<CoroutineResponseReactorState>
     {
+        public CoroutineResponseReactor()
+            : base("")
+        {
+        }
 
         class ResponseCoroutine : ReactorCoroutine<CoroutineResponseReactorState>
         {

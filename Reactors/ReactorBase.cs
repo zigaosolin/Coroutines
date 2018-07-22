@@ -10,21 +10,20 @@ namespace Reactors
         EventQueue eventQueue;
         EventCoroutineScheduler scheduler;
         FullReactorEvent currentEvent;
-        object reactorState;
         IReactorListener listener;
+        string uniqueName;
         long sendEventID = 1;
         SortedDictionary<long, RPCWait> pendingRPCWaits = new SortedDictionary<long, RPCWait>();
 
-        public object State
-        {
-            get { return reactorState; }
-        }
+        public object State { get; }
 
-        internal ReactorBase(object reactorState)
+        internal ReactorBase(string uniqueName, object reactorState, IReactorListener listener)
         {
-            this.reactorState = reactorState;
+            this.uniqueName = uniqueName;
+            State = reactorState;
             eventQueue = new EventQueue();
             scheduler = new EventCoroutineScheduler(eventQueue);
+            this.listener = listener;
         }
 
         public void Enqueue(IReactorReference source, IReactorEvent ev, long eventID = 0 , long replyID = 0)
@@ -95,6 +94,11 @@ namespace Reactors
         
 
         protected abstract void OnEvent(IReactorEvent ev);
+
+        protected virtual object ReplicateState()
+        {
+            return new object();
+        }
 
         protected void Execute(Coroutine coroutine)
         {
@@ -181,5 +185,7 @@ namespace Reactors
         }
 
         string IReactorReference.UniqueName => "";
+
+        public object ReactorState => State;
     }
 }

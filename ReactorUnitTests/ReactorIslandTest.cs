@@ -26,6 +26,11 @@ namespace Reactors.Tests
 
         class Reactor1 : Reactor<Reactor1State>
         {
+            public Reactor1()
+                : base("Reactor1")
+            {
+            }
+
             protected override void OnEvent(IReactorEvent ev)
             {
                 switch (ev)

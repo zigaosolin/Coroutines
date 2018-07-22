@@ -12,6 +12,11 @@ namespace Chat.Server
 
     class Player : Reactor<PlayerState>
     {
+        public Player()
+            : base("Player")
+        {
+        }
+
         protected override void OnEvent(IReactorEvent ev)
         {
             throw new NotImplementedException();

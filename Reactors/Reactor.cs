@@ -7,8 +7,8 @@ namespace Reactors
     public abstract class Reactor<TState> : ReactorBase
         where TState : class, new()
     {
-        protected Reactor()
-            : base(new TState())
+        protected Reactor(string uniqueName, IReactorListener listener = null)
+            : base(uniqueName, new TState(), listener)
         {
         }
 
@@ -25,6 +25,16 @@ namespace Reactors
         where TState : class, new()
         where TReplicatedState : class, new()
     {
-        public abstract TReplicatedState ReplicateState();
+        protected ReactorWithReplicatedState(string uniqueName, IReactorListener listener = null)
+            : base(uniqueName, listener)
+        {
+        }
+
+        protected sealed override object ReplicateState()
+        {
+            return Replicate();
+        }
+
+        protected abstract TReplicatedState Replicate();
     }
 }

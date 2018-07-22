@@ -27,6 +27,10 @@ namespace Reactors.Tests
 
         class Reactor1 : Reactor<Reactor1State>
         {
+            public Reactor1()
+                : base("Reactor1")
+            {
+            }
 
             protected override void OnEvent(IReactorEvent ev)
             {
@@ -65,6 +69,11 @@ namespace Reactors.Tests
 
         class Reactor2 : Reactor<Reactor2State>
         {
+            public Reactor2()
+                : base("Reactor2")
+            {
+            }
+
             class Coroutine1 : Coroutine
             {
                 ReactorBase reactor;

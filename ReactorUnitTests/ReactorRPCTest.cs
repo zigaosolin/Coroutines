@@ -36,6 +36,7 @@ namespace Reactors.Tests
             }
 
             public RPCReactor(IReactorReference dest)
+                : base("RPCReactor")
             {
                 this.dest = dest;
 
@@ -49,6 +50,11 @@ namespace Reactors.Tests
 
         class ResponseReactor : Reactor<object>
         {
+            public ResponseReactor()
+                : base("Response")
+            {
+            }
+
             protected override void OnEvent(IReactorEvent ev)
             {
                 if(ev is SendEvent)
