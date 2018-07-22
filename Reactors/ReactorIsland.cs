@@ -9,7 +9,7 @@ namespace Reactors
     public class ReactorIsland
     {
         object syncRoot = new object();
-        Dictionary<string, ReactorBase> reactors = new Dictionary<string, ReactorBase>();     
+        List<ReactorBase> reactors = new List<ReactorBase>();     
         TimeSpan desiredDeltaTime = new TimeSpan(0);
         bool stopRequested = false;
         public bool IsRunning { get; private set; } = false;
@@ -31,7 +31,7 @@ namespace Reactors
                 lock (syncRoot)
                 {
                     // We need copy to be thread safe
-                    return reactors.Values.ToList();
+                    return reactors.ToList();
                 }
             }
         }
@@ -40,7 +40,7 @@ namespace Reactors
         {
             lock(syncRoot)
             {
-                reactors.Add(reactor.Reference.Reference, reactor);
+                reactors.Add(reactor);
             }
         }
 
@@ -48,7 +48,7 @@ namespace Reactors
         {
             lock(syncRoot)
             {
-                return reactors.Remove(reactor.Reference.Reference);
+                return reactors.Remove(reactor);
             }
         }
 
@@ -69,9 +69,9 @@ namespace Reactors
                 lock(syncRoot)
                 {
                     float deltaTimeFloat = (float)deltaTime.TotalSeconds;
-                    foreach (var reactor in reactors)
+                    for(int i = 0; i < reactors.Count; i++)
                     {
-                        reactor.Value.Update(deltaTimeFloat);
+                        reactors[i].Update(deltaTimeFloat);
                     }
                 }
 
@@ -124,9 +124,9 @@ namespace Reactors
                 lock (syncRoot)
                 {
                     float deltaTimeFloat = (float)deltaTime.TotalSeconds;
-                    foreach (var reactor in reactors)
+                    for (int i = 0; i < reactors.Count; i++)
                     {
-                        reactor.Value.Update(deltaTimeFloat);
+                        reactors[i].Update(deltaTimeFloat);
                     }
                 }
 

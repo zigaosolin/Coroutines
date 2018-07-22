@@ -39,7 +39,7 @@ namespace Reactors
         }
     }
 
-    public abstract class ReactorCoroutine<TReactorState> : ReactorCoroutine
+    public abstract class ReactorCoroutine<TEvent, TReactorState> : ReactorCoroutine
         where TReactorState : class, new()
     {
         public new TReactorState State
@@ -47,6 +47,14 @@ namespace Reactors
             get
             {
                 return (TReactorState)base.State;
+            }
+        }
+
+        public new TEvent Event
+        {
+            get
+            {
+                return (TEvent)base.Event;
             }
         }
     }

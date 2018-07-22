@@ -5,59 +5,29 @@ using System.Text;
 
 namespace Chat
 {
-    public sealed class PlayerLogin : IReactorEvent
+    public class RenamePlayer : IReactorEvent
     {
-        public string Username { get; }
-        public string Password { get; }
+        public string NewFirstName { get; }
+        public string NewLastName { get; }
+        public string NewNickName { get; }
 
-        public PlayerLogin(string username, string password)
+        public RenamePlayer(string firstName, string lastName, string nickName)
         {
-            Username = username;
-            Password = Password;
+            NewFirstName = firstName;
+            NewLastName = lastName;
+            NewNickName = nickName;
         }
     }
 
-    public sealed class PlayerLoginResponse : IReactorEvent
+    public class InvitePlayerToRoom : IReactorEvent
     {
-        public bool Succesfull { get; } = true;
-        public IReactorReference PlayerReactor { get; }
-        public string ErrorMessage { get; }
+        public IReactorReference OtherPlayer { get; }
+        public IReactorReference Room { get; }
 
-        public PlayerLoginResponse(IReactorReference playerReactor)
+        public InvitePlayerToRoom(IReactorReference otherPlayer, IReactorReference room)
         {
-            PlayerReactor = playerReactor;
-        }
-
-        public PlayerLoginResponse(string errorMessage)
-        {
-            Succesfull = false;
-            ErrorMessage = errorMessage;
-        }
-    }
-
-    public sealed class CreatePlayer : IReactorEvent
-    {
-        public string Username { get; }
-        public string FirstName { get; }
-        public string LastName { get; }
-        public string Password { get; }
-    }
-
-    public sealed class CreatePlayerResponse : IReactorEvent
-    {
-        public bool Succesfull { get; } = true;
-        public IReactorReference PlayerReactor { get; }
-        public string ErrorMessage { get; }
-
-        public CreatePlayerResponse(IReactorReference playerReactor)
-        {
-            PlayerReactor = playerReactor;
-        }
-
-        public CreatePlayerResponse(string errorMessage)
-        {
-            Succesfull = false;
-            ErrorMessage = errorMessage;
+            OtherPlayer = otherPlayer;
+            Room = room;
         }
     }
 }

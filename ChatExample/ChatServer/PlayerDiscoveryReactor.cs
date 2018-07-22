@@ -10,12 +10,15 @@ namespace Chat.Server
     {
         public Dictionary<string, Tuple<string, IReactorReference>> UsernameToPlayer 
             = new Dictionary<string, Tuple<string, IReactorReference>>();
+
+        public Dictionary<string, IReactorReference> PlayersByHandle
+            = new Dictionary<string, IReactorReference>();
     }
 
-    sealed class PlayerDiscovery : Reactor<PlayerDiscoveryState>
+    sealed class PlayerDiscoveryReactor : Reactor<PlayerDiscoveryState>
     {
-        public PlayerDiscovery() 
-            : base(typeof(PlayerDiscovery).Name)
+        public PlayerDiscoveryReactor() 
+            : base("")
         {
         }
 
@@ -78,11 +81,26 @@ namespace Chat.Server
                 return;
             }
 
+            string handle = Guid.NewGuid().ToString();
+
+            if(State.PlayersByHandle.TryGetValue(handle, out IReactorReference result2))
+            {
+                Reply(new CreatePlayerResponse("Player's handle already exists"));
+                return;
+            }
+
             EnterCriticalSection();
 
-            var player = new Player(typeof(Player).Name + ":" + ev.Username /*TODO: init state*/);
-            // Need to add it somewhere
+            // Need create player's reactor and add it to repo
+            var playerReactor = new PlayerReactor(handle);
+            Repository.Add(playerReactor);
 
+            var reference = Repository.Resolve<PlayerReactor>(handle);
+
+            State.UsernameToPlayer.Add(ev.Username, new Tuple<string, IReactorReference>(ev.Password, reference));
+            State.PlayersByHandle.Add(handle, reference);
+
+            Reply(new CreatePlayerResponse(reference));
 
         }
     }

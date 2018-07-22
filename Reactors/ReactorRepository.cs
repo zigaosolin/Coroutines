@@ -68,6 +68,11 @@ namespace Reactors
             }
         }
 
+        public static ReactorIsland AddToGlobal(ReactorBase reactor)
+        {
+            return Global.Add(reactor);
+        }
+
         public ReactorIsland Add(ReactorBase reactor, int reactorIslandIndex = -1)
         {
             string referenceName = reactor.GetType().FullName + ":" + reactor.Name;
@@ -75,7 +80,8 @@ namespace Reactors
             int index = reactorIslandIndex;
             if (index < 0)
             {
-                reactorIslandIndex = Interlocked.Increment(ref currentIsland);
+                index = Interlocked.Increment(ref currentIsland);
+                index = index < 0 ? -index : index;
             }
             var island = islands[index % islands.Length];
 
