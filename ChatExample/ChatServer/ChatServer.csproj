@@ -9,7 +9,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Coroutines\Coroutines.csproj" />
     <ProjectReference Include="..\..\Reactors\Reactors.csproj" />
-    <ProjectReference Include="..\ChatClient\ChatClient.csproj" />
+    <ProjectReference Include="..\ChatService\ChatService.csproj" />
   </ItemGroup>
 
 </Project>

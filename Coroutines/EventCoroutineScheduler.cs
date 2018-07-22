@@ -102,7 +102,7 @@ namespace Coroutines
             StartAndMakeFirstIteration(coroutine);
         }
 
-        public void Update(ICoroutineEvent nextEvent)
+        public Exception Update(ICoroutineEvent nextEvent)
         {
             if(updateThreadID != -1)
             {
@@ -110,25 +110,28 @@ namespace Coroutines
             }
             updateThreadID = Thread.CurrentThread.ManagedThreadId;
 
+            Exception result = null;
             switch (nextEvent)
             {
                 case StartCoroutineEvent sce:
-                    StartCoroutine(sce);
+                    result = StartCoroutine(sce);
                     break;
                 case ContinueCoroutineEvent cce:
-                    ContinueCoroutine(cce);
+                    result = ContinueCoroutine(cce);
                     break;
             }
 
             updateThreadID = -1;
+
+            return result;
         }
 
-        private void StartCoroutine(StartCoroutineEvent sce)
+        private Exception StartCoroutine(StartCoroutineEvent sce)
         {
-            StartAndMakeFirstIteration(sce.Coroutine);
+            return StartAndMakeFirstIteration(sce.Coroutine);
         }
 
-        private void ContinueCoroutine(ContinueCoroutineEvent cce)
+        private Exception ContinueCoroutine(ContinueCoroutineEvent cce)
         {
             var state = runningCoroutines[cce.CoroutineID];
 
@@ -143,7 +146,7 @@ namespace Coroutines
                 {
                     // We are not finished, poll next frame
                     eventQueue.EnqueueNextFrame(cce);
-                    return;
+                    return null;
                 }
 
                 // We check if wait object ended in bad state
@@ -152,7 +155,7 @@ namespace Coroutines
                     coroutine.SignalException(
                         new AggregateException("Wait for object threw an exception", waitForObject.Exception));
 
-                    return;
+                    return coroutine.Exception;
                 }
 
                 waitForObject = null;
@@ -163,6 +166,8 @@ namespace Coroutines
                 // We remove it if completed
                 runningCoroutines.Remove(state.CoroutineID);
             }
+
+            return coroutine.Exception;
         }
 
 
@@ -260,7 +265,7 @@ namespace Coroutines
             }
         }
 
-        private void StartAndMakeFirstIteration(Coroutine coroutine)
+        private Exception StartAndMakeFirstIteration(Coroutine coroutine)
         {           
             var iterator = coroutine.Execute();
 
@@ -277,6 +282,8 @@ namespace Coroutines
                 // We add it to running coroutines if not completed
                 runningCoroutines.Add(state.CoroutineID, state);
             }
+
+            return coroutine.Exception;
         }
     }
 }

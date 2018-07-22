@@ -5,7 +5,33 @@ using System.Text;
 
 namespace Chat
 {
-    class PlayerLoginEvent : IReactorEvent
+    public sealed class PlayerLogin : IReactorEvent
     {
+        public string Username { get; }
+        public string Password { get; }
+
+        public PlayerLogin(string username, string password)
+        {
+            Username = username;
+            Password = Password;
+        }
+    }
+
+    public sealed class PlayerLoginResponse : IReactorEvent
+    {
+        public bool Succesfull { get; } = true;
+        public IReactorReference PlayerReactor { get; }
+        public string ErrorMessage { get; }
+
+        public PlayerLoginResponse(IReactorReference playerReactor)
+        {
+            PlayerReactor = playerReactor;
+        }
+
+        public PlayerLoginResponse(string errorMessage)
+        {
+            Succesfull = false;
+            ErrorMessage = errorMessage;
+        }
     }
 }

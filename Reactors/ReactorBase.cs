@@ -14,6 +14,7 @@ namespace Reactors
         string uniqueName;
         long sendEventID = 1;
         SortedDictionary<long, RPCWait> pendingRPCWaits = new SortedDictionary<long, RPCWait>();
+        bool currentInCriticalSection = false;
 
         public object State { get; }
 
@@ -45,58 +46,88 @@ namespace Reactors
             eventQueue.NewFrame();
             scheduler.NewFrame(deltaTime);
 
-            for (int i = 0; i < maxEvents; i++)
+            try
             {
-                if (!eventQueue.TryDequeue(out IEvent ev))
-                    break;
-
-                switch (ev)
+                for (int i = 0; i < maxEvents; i++)
                 {
-                    case ICoroutineEvent cev:
-                        {
-                            eventsProcessed++;
-                            scheduler.Update(cev);
-                        }
+                    if (!eventQueue.TryDequeue(out IEvent ev))
                         break;
-                    case FullReactorEvent rev:
-                        {
-                            if (rev.ReplyID != 0)
+
+                    switch (ev)
+                    {
+                        case ICoroutineEvent cev:
                             {
                                 eventsProcessed++;
-
-                                if (pendingRPCWaits.TryGetValue(rev.ReplyID, out RPCWait value))
+                                Exception ex = scheduler.Update(cev);
+                                if(ex != null)
                                 {
-                                    pendingRPCWaits.Remove(rev.ReplyID);
-                                    value.Trigger(rev);
+                                    throw ex;
+                                }
+                            }
+                            break;
+                        case FullReactorEvent rev:
+                            {
+                                if (rev.ReplyID != 0)
+                                {
+                                    eventsProcessed++;
+
+                                    if (pendingRPCWaits.TryGetValue(rev.ReplyID, out RPCWait value))
+                                    {
+                                        pendingRPCWaits.Remove(rev.ReplyID);
+                                        value.Trigger(rev);
+                                        continue;
+                                    }
+
+                                    listener?.OnMissedReplyEvent(rev.Source, rev.Event, rev.ReplyID);
                                     continue;
                                 }
 
-                                listener?.OnMissedReplyEvent(rev.Source, rev.Event, rev.ReplyID);
-                                continue;
+                                if (startNewEvents)
+                                {
+                                    currentEvent = rev;
+                                    currentInCriticalSection = false;
+                                    try
+                                    {
+                                        OnEvent(rev.Event);
+                                    } catch(Exception ex)
+                                    {
+                                        if(currentInCriticalSection)
+                                        {
+                                            throw ex;
+                                        } else
+                                        {
+                                            listener?.OnValidationException(ex);
+                                        }
+                                    }
+                                    currentInCriticalSection = true;
+                                    currentEvent = null;
+                                }
+                                else
+                                {
+                                    eventQueue.EnqueueNextFrame(rev);
+                                }
                             }
-
-                            if (startNewEvents)
-                            {
-                                currentEvent = rev;
-                                OnEvent(rev.Event);
-                                currentEvent = null;
-                            }
-                            else
-                            {
-                                eventQueue.EnqueueNextFrame(rev);
-                            }
-                        }
-                        break;
-                    default:
-                        throw new ReactorException("Invalid event type");
+                            break;
+                        default:
+                            throw new ReactorException("Invalid event type");
+                    }
                 }
+            } catch(Exception ex)
+            {
+                listener?.OnCriticalException(ex);
+                throw ex;
             }
 
             return eventsProcessed;
         }
 
         protected abstract void OnEvent(IReactorEvent ev);
-        
+
+        protected void EnterCriticalSection()
+        {
+            currentInCriticalSection = true;
+        }
+
         protected void Execute(Coroutine coroutine)
         {
             scheduler.Execute(coroutine);
