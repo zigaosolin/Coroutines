@@ -26,13 +26,34 @@ namespace Chat.Server
                     OnPlayerLogin(loginEv);
                     break;
                 default:
-                    throw new ReactorException("Invalid event");
+                    throw new ChatException("Invalid event");
             }
         }
 
         private void OnPlayerLogin(PlayerLogin ev)
         {
+            if(string.IsNullOrEmpty(ev.Username))
+                throw new ChatException("Username is empty");
             
+            if (string.IsNullOrEmpty(ev.Password))
+                throw new ChatException("Password is empty");
+
+            // May throw, as we are not in critical section it is ok
+            if(!State.UsernameToPlayer.TryGetValue(ev.Username, out Tuple<string, IReactorReference> result))
+            {
+                Reply(new PlayerLoginResponse("Invalid username"));
+                return;
+            }
+
+            if (result.Item1 != ev.Password)
+            {
+                Reply(new PlayerLoginResponse("Invalid password"));
+                return;
+            }
+
+            EnterCriticalSection();
+
+            Reply(new PlayerLoginResponse(result.Item2));
         }
     }
 }

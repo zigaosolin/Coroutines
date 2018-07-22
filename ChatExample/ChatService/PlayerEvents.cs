@@ -34,4 +34,11 @@ namespace Chat
             ErrorMessage = errorMessage;
         }
     }
+
+    public sealed class CreatePlayer : IReactorEvent
+    {
+        public string UserName { get; }
+        public string FirstName { get; }
+        public string LastName { get; }
+    }
 }

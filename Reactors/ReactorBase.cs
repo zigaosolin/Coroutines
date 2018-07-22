@@ -15,6 +15,7 @@ namespace Reactors
         long sendEventID = 1;
         SortedDictionary<long, RPCWait> pendingRPCWaits = new SortedDictionary<long, RPCWait>();
         bool currentInCriticalSection = false;
+        Exception criticalException = null;
 
         public object State { get; }
 
@@ -42,6 +43,9 @@ namespace Reactors
 
         public int Update(float deltaTime, int maxEvents = int.MaxValue, bool startNewEvents = true)
         {
+            if (criticalException != null)
+                throw criticalException;
+
             int eventsProcessed = 0;
             eventQueue.NewFrame();
             scheduler.NewFrame(deltaTime);
@@ -115,6 +119,7 @@ namespace Reactors
             } catch(Exception ex)
             {
                 listener?.OnCriticalException(ex);
+                criticalException = ex;
                 throw ex;
             }
 
