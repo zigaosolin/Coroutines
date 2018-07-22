@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Chat.Server
 {
@@ -24,6 +25,9 @@ namespace Chat.Server
             {
                 case PlayerLogin loginEv:
                     OnPlayerLogin(loginEv);
+                    break;
+                case CreatePlayer createPlayer:
+                    OnCreatePlayer(createPlayer);
                     break;
                 default:
                     throw new ChatException("Invalid event");
@@ -54,6 +58,32 @@ namespace Chat.Server
             EnterCriticalSection();
 
             Reply(new PlayerLoginResponse(result.Item2));
+        }
+
+        static Regex usernameRegex = new Regex("[a-zA-Z]*");
+        static Regex passwordRegex = new Regex("[a-zA-Z0-9]*");
+
+        private void OnCreatePlayer(CreatePlayer ev)
+        {
+            if (string.IsNullOrEmpty(ev.Username) || ev.Username.Length < 5 || !usernameRegex.IsMatch(ev.Username))
+                Reply(new CreatePlayerResponse("Username must be at least 5 characters and consist only of US characters"));
+
+            if (string.IsNullOrEmpty(ev.Password) || ev.Password.Length < 5 || !passwordRegex.IsMatch(ev.Password))
+                Reply(new CreatePlayerResponse("Username must be at least 5 characters and consist only of US characters and numbers"));
+
+            // May throw, as we are not in critical section it is ok
+            if (State.UsernameToPlayer.TryGetValue(ev.Username, out Tuple<string, IReactorReference> result))
+            {
+                Reply(new CreatePlayerResponse("Username already exists");
+                return;
+            }
+
+            EnterCriticalSection();
+
+            var player = new Player(typeof(Player).Name + ":" + ev.Username /*TODO: init state*/);
+            // Need to add it somewhere
+
+
         }
     }
 }

@@ -37,8 +37,27 @@ namespace Chat
 
     public sealed class CreatePlayer : IReactorEvent
     {
-        public string UserName { get; }
+        public string Username { get; }
         public string FirstName { get; }
         public string LastName { get; }
+        public string Password { get; }
+    }
+
+    public sealed class CreatePlayerResponse : IReactorEvent
+    {
+        public bool Succesfull { get; } = true;
+        public IReactorReference PlayerReactor { get; }
+        public string ErrorMessage { get; }
+
+        public CreatePlayerResponse(IReactorReference playerReactor)
+        {
+            PlayerReactor = playerReactor;
+        }
+
+        public CreatePlayerResponse(string errorMessage)
+        {
+            Succesfull = false;
+            ErrorMessage = errorMessage;
+        }
     }
 }
