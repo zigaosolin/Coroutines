@@ -17,7 +17,7 @@ namespace Reactors.Performance
         {
         }
 
-        class ResponseCoroutine : ReactorCoroutine<CoroutineResponseReactorState>
+        class ResponseCoroutine : ReactorCoroutine<IReactorEvent, CoroutineResponseReactorState>
         {
             protected override IEnumerator<IWaitObject> Execute()
             {
