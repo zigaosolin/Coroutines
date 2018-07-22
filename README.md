@@ -2,8 +2,6 @@
 A C# implementation of Coroutines similar to Unity (using IEnumerator). Coroutines are "sliced" on each yield statement, very similarly to how "await" slices tasks in C# async.
 
 ```
-public SampleCoroutine : Coroutine
-{
 IEnumerator<IWaitObject> Execute()
 {
    float time = 0.0f;
