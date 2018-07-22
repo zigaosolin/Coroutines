@@ -32,9 +32,11 @@ namespace Reactors
 
         protected sealed override object ReplicateState()
         {
-            return Replicate();
+            TReplicatedState newState = new TReplicatedState();
+            Replicate(newState);
+            return newState;
         }
 
-        protected abstract TReplicatedState Replicate();
+        protected abstract void Replicate(TReplicatedState replState);
     }
 }
